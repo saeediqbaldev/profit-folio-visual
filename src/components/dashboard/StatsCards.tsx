@@ -25,15 +25,13 @@ const StatsCards = ({ trades }: StatsCardsProps) => {
       };
     }
 
-    const winningTrades = trades.filter(trade => {
-      const result = trade.result.toLowerCase();
-      return result.includes('profit') || result.includes('win') || result.includes('success');
-    }).length;
+    const winningTrades = trades.filter(trade => 
+      trade.result === 'WIN'
+    ).length;
 
-    const losingTrades = trades.filter(trade => {
-      const result = trade.result.toLowerCase();
-      return result.includes('loss') || result.includes('lose') || result.includes('fail');
-    }).length;
+    const losingTrades = trades.filter(trade => 
+      trade.result === 'LOSS'
+    ).length;
 
     const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
 

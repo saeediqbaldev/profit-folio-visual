@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -159,12 +160,16 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
             {/* Result */}
             <div className="space-y-2">
               <Label htmlFor="result">Result</Label>
-              <Input
-                id="result"
-                value={formData.result}
-                onChange={(e) => handleInputChange('result', e.target.value)}
-                placeholder="Trade outcome"
-              />
+              <Select value={formData.result} onValueChange={(value) => handleInputChange('result', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select trade result" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WIN">WIN</SelectItem>
+                  <SelectItem value="LOSS">LOSS</SelectItem>
+                  <SelectItem value="BREAKEVEN">BREAKEVEN</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Trade Result */}

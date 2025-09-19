@@ -14,22 +14,22 @@ interface TradeChartProps {
 
 const TradeChart = ({ trades }: TradeChartProps) => {
   const calculatePieData = () => {
-    const winningTrades = trades.filter(trade => {
-      const result = trade.result.toLowerCase();
-      return result.includes('profit') || result.includes('win') || result.includes('success');
-    }).length;
+    const winningTrades = trades.filter(trade => 
+      trade.result === 'WIN'
+    ).length;
 
-    const losingTrades = trades.filter(trade => {
-      const result = trade.result.toLowerCase();
-      return result.includes('loss') || result.includes('lose') || result.includes('fail');
-    }).length;
+    const losingTrades = trades.filter(trade => 
+      trade.result === 'LOSS'
+    ).length;
 
-    const neutralTrades = trades.length - winningTrades - losingTrades;
+    const breakevenTrades = trades.filter(trade => 
+      trade.result === 'BREAKEVEN'
+    ).length;
 
     return [
       { name: 'Winning', value: winningTrades, color: 'hsl(var(--success))' },
       { name: 'Losing', value: losingTrades, color: 'hsl(var(--danger))' },
-      { name: 'Neutral', value: neutralTrades, color: 'hsl(var(--muted-foreground))' },
+      { name: 'Breakeven', value: breakevenTrades, color: 'hsl(var(--muted-foreground))' },
     ].filter(item => item.value > 0);
   };
 
@@ -44,10 +44,9 @@ const TradeChart = ({ trades }: TradeChartProps) => {
         monthlyStats[monthKey] = { wins: 0, losses: 0 };
       }
 
-      const result = trade.result.toLowerCase();
-      if (result.includes('profit') || result.includes('win') || result.includes('success')) {
+      if (trade.result === 'WIN') {
         monthlyStats[monthKey].wins++;
-      } else if (result.includes('loss') || result.includes('lose') || result.includes('fail')) {
+      } else if (trade.result === 'LOSS') {
         monthlyStats[monthKey].losses++;
       }
     });
