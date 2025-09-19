@@ -4,24 +4,21 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import LoginPage from "@/components/auth/LoginPage";
+import AuthPage from "@/components/auth/AuthPage";
 import Navbar from "@/components/layout/Navbar";
 import JournalPage from "@/pages/JournalPage";
 import DashboardPage from "@/pages/DashboardPage";
 import Lightbox from "@/components/ui/lightbox";
+import { useAuth } from "@/hooks/useAuth";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, loading, signOut, isAuthenticated } = useAuth();
   const [currentPage, setCurrentPage] = useState("journal");
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut();
     setCurrentPage("journal");
   };
 
@@ -29,14 +26,31 @@ const App = () => {
     setCurrentPage(page);
   };
 
-  if (!isLoggedIn) {
+  if (loading) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="light" storageKey="trading-journal-theme">
+          <TooltipProvider>
+            <div className="min-h-screen bg-background flex items-center justify-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <span className="text-muted-foreground">Loading...</span>
+              </div>
+            </div>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  if (!isAuthenticated) {
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="light" storageKey="trading-journal-theme">
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <LoginPage onLogin={handleLogin} />
+            <AuthPage onAuthSuccess={() => {}} />
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
