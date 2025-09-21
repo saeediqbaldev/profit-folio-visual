@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 interface Trade {
   id: string;
   result: string;
-  tradeResult: string;
+  assetPair?: string;
   createdAt: string;
 }
 

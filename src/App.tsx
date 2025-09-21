@@ -8,6 +8,8 @@ import AuthPage from "@/components/auth/AuthPage";
 import Navbar from "@/components/layout/Navbar";
 import JournalPage from "@/pages/JournalPage";
 import DashboardPage from "@/pages/DashboardPage";
+import ProfilePage from "@/pages/ProfilePage";
+import AdminPage from "@/pages/AdminPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -71,6 +73,8 @@ const App = () => {
             />
             {currentPage === "journal" && <JournalPage />}
             {currentPage === "dashboard" && <DashboardPage />}
+            {currentPage === "profile" && <ProfilePage />}
+            {currentPage === "admin" && <AdminPage />}
             <Lightbox />
           </div>
         </TooltipProvider>

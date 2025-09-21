@@ -5,12 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
 import { Plus, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Trade {
   id: string;
-  sno: string;
+  sno?: number;
   entry: string;
   reason: string;
   tp: string;
@@ -18,18 +19,17 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
-  tradeResult: string;
+  assetPair: string;
   createdAt: string;
 }
 
 interface TradeFormProps {
-  onAddTrade: (trade: Omit<Trade, 'id' | 'createdAt'>) => void;
+  onAddTrade: (trade: Omit<Trade, 'id' | 'createdAt' | 'sno'>) => void;
 }
 
 const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    sno: "",
     entry: "",
     reason: "",
     tp: "",
@@ -37,7 +37,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     result: "",
     learning: "",
     screenshot: null as string | null,
-    tradeResult: "",
+    assetPair: "",
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -70,11 +70,11 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.sno || !formData.entry) {
+    if (!formData.entry || !formData.assetPair) {
       toast({
         variant: "destructive",
         title: "Missing required fields",
-        description: "Please fill in at least SNO and Entry fields.",
+        description: "Please fill in Entry and Asset Pair fields.",
       });
       return;
     }
@@ -83,7 +83,6 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     
     // Reset form
     setFormData({
-      sno: "",
       entry: "",
       reason: "",
       tp: "",
@@ -91,7 +90,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       result: "",
       learning: "",
       screenshot: null,
-      tradeResult: "",
+      assetPair: "",
     });
 
     toast({
@@ -111,38 +110,34 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* SNO */}
+            {/* Asset Pair */}
             <div className="space-y-2">
-              <Label htmlFor="sno">SNO *</Label>
-              <Input
-                id="sno"
-                value={formData.sno}
-                onChange={(e) => handleInputChange('sno', e.target.value)}
-                placeholder="Trade number"
-                required
-              />
+              <Label htmlFor="assetPair">Asset Pair *</Label>
+              <Select value={formData.assetPair} onValueChange={(value) => handleInputChange('assetPair', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select asset pair" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="XAUUSD">XAUUSD</SelectItem>
+                  <SelectItem value="BTCUSD">BTCUSD</SelectItem>
+                  <SelectItem value="ETHUSD">ETHUSD</SelectItem>
+                  <SelectItem value="USOIL">USOIL</SelectItem>
+                  <SelectItem value="SILVER">SILVER</SelectItem>
+                  <SelectItem value="EURUSD">EURUSD</SelectItem>
+                  <SelectItem value="GBPJPY">GBPJPY</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Entry */}
             <div className="space-y-2">
-              <Label htmlFor="entry">Entry *</Label>
+              <Label htmlFor="entry">Entry Price *</Label>
               <Input
                 id="entry"
                 value={formData.entry}
                 onChange={(e) => handleInputChange('entry', e.target.value)}
                 placeholder="Entry price"
                 required
-              />
-            </div>
-
-            {/* TP */}
-            <div className="space-y-2">
-              <Label htmlFor="tp">Take Profit (TP)</Label>
-              <Input
-                id="tp"
-                value={formData.tp}
-                onChange={(e) => handleInputChange('tp', e.target.value)}
-                placeholder="Target price"
               />
             </div>
 
@@ -158,7 +153,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
             </div>
 
             {/* Result */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2 lg:col-span-1">
               <Label htmlFor="result">Result</Label>
               <Select value={formData.result} onValueChange={(value) => handleInputChange('result', value)}>
                 <SelectTrigger>
@@ -171,17 +166,19 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            {/* Trade Result */}
-            <div className="space-y-2">
-              <Label htmlFor="tradeResult">Trade Result</Label>
-              <Input
-                id="tradeResult"
-                value={formData.tradeResult}
-                onChange={(e) => handleInputChange('tradeResult', e.target.value)}
-                placeholder="Final result"
-              />
-            </div>
+          {/* Take Profit with Line Numbers */}
+          <div className="space-y-2">
+            <Label htmlFor="tp">Take Profit Levels</Label>
+            <LineNumbersTextarea
+              id="tp"
+              value={formData.tp}
+              onChange={(e) => handleInputChange('tp', e.target.value)}
+              placeholder="TP1: 2150.00&#10;TP2: 2160.00&#10;TP3: 2170.00"
+              rows={4}
+            />
+            <p className="text-xs text-muted-foreground">Enter each TP level on a new line</p>
           </div>
 
           {/* Reason */}

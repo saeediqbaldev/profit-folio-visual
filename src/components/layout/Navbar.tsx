@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, TrendingUp, LogOut, BarChart3, PenTool } from "lucide-react";
+import { Moon, Sun, TrendingUp, LogOut, BarChart3, PenTool, User, Settings } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
 interface NavbarProps {
@@ -13,8 +13,10 @@ const Navbar = ({ currentPage, onNavigate, onLogout }: NavbarProps) => {
   const { theme, setTheme } = useTheme();
 
   const navigation = [
-    { id: "journal", label: "Journal", icon: PenTool },
+    { id: "journal", label: "Add Trades", icon: PenTool },
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "profile", label: "Profile", icon: User },
+    { id: "admin", label: "Admin", icon: Settings },
   ];
 
   return (

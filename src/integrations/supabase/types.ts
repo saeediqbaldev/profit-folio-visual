@@ -14,39 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
+          asset_pair: string | null
           created_at: string
           entry: string
           id: string
           learning: string | null
           reason: string | null
           result: string | null
+          screenshot_url: string | null
           sl: string | null
+          sno: number
           tp: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          asset_pair?: string | null
           created_at?: string
           entry: string
           id?: string
           learning?: string | null
           reason?: string | null
           result?: string | null
+          screenshot_url?: string | null
           sl?: string | null
+          sno?: never
           tp?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          asset_pair?: string | null
           created_at?: string
           entry?: string
           id?: string
           learning?: string | null
           reason?: string | null
           result?: string | null
+          screenshot_url?: string | null
           sl?: string | null
+          sno?: never
           tp?: string | null
           updated_at?: string
           user_id?: string

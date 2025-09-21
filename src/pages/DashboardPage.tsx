@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import StatsCards from "@/components/dashboard/StatsCards";
 import TradeChart from "@/components/dashboard/TradeChart";
 import TradesList from "@/components/dashboard/TradesList";
+import AdvancedCharts from "@/components/dashboard/AdvancedCharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 interface Trade {
   id: string;
-  sno: string;
+  sno?: number;
   entry: string;
   reason: string;
   tp: string;
@@ -16,7 +17,7 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
-  tradeResult: string;
+  assetPair: string;
   createdAt: string;
 }
 
@@ -52,15 +53,15 @@ const DashboardPage = () => {
           // Transform Supabase data to match frontend interface
           const transformedTrades = data.map(trade => ({
             id: trade.id,
-            sno: '', // Not used in current implementation
+            sno: trade.sno,
             entry: trade.entry,
             reason: trade.reason || '',
             tp: trade.tp || '',
             sl: trade.sl || '',
             result: trade.result || '',
             learning: trade.learning || '',
-            screenshot: null, // Not implemented yet
-            tradeResult: '', // Not used in current implementation
+            screenshot: trade.screenshot_url,
+            assetPair: trade.asset_pair || '',
             createdAt: trade.created_at,
           }));
           setTrades(transformedTrades);
@@ -93,6 +94,8 @@ const DashboardPage = () => {
           sl: updatedTrade.sl,
           result: updatedTrade.result,
           learning: updatedTrade.learning,
+          asset_pair: updatedTrade.assetPair,
+          screenshot_url: updatedTrade.screenshot,
         })
         .eq('id', updatedTrade.id)
         .eq('user_id', user.id);
@@ -181,6 +184,7 @@ const DashboardPage = () => {
         </div>
 
         <StatsCards trades={trades} />
+        <AdvancedCharts trades={trades} />
         <TradeChart trades={trades} />
         <TradesList 
           trades={trades} 

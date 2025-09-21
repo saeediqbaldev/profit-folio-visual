@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Target, BarChart3 } from "lucide-react";
 interface Trade {
   id: string;
   result: string;
-  tradeResult: string;
+  assetPair?: string;
   entry: string;
   tp: string;
   sl: string;

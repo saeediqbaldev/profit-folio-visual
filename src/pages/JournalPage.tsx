@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Trade {
   id: string;
-  sno: string;
+  sno?: number;
   entry: string;
   reason: string;
   tp: string;
@@ -15,7 +15,7 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
-  tradeResult: string;
+  assetPair: string;
   createdAt: string;
 }
 
@@ -48,15 +48,15 @@ const JournalPage = () => {
           // Transform Supabase data to match frontend interface
           const transformedTrades = data.map(trade => ({
             id: trade.id,
-            sno: '', // Not used in current implementation
+            sno: trade.sno,
             entry: trade.entry,
             reason: trade.reason || '',
             tp: trade.tp || '',
             sl: trade.sl || '',
             result: trade.result || '',
             learning: trade.learning || '',
-            screenshot: null, // Not implemented yet
-            tradeResult: '', // Not used in current implementation
+            screenshot: trade.screenshot_url,
+            assetPair: trade.asset_pair || '',
             createdAt: trade.created_at,
           }));
           setTrades(transformedTrades);
@@ -76,7 +76,7 @@ const JournalPage = () => {
     loadTrades();
   }, [user, toast]);
 
-  const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt'>) => {
+  const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt' | 'sno'>) => {
     if (!user) return;
 
     try {
@@ -90,6 +90,8 @@ const JournalPage = () => {
           sl: tradeData.sl,
           result: tradeData.result,
           learning: tradeData.learning,
+          asset_pair: tradeData.assetPair,
+          screenshot_url: tradeData.screenshot,
         })
         .select()
         .single();
@@ -105,15 +107,15 @@ const JournalPage = () => {
         // Transform and add to local state
         const newTrade: Trade = {
           id: data.id,
-          sno: '',
+          sno: data.sno,
           entry: data.entry,
           reason: data.reason || '',
           tp: data.tp || '',
           sl: data.sl || '',
           result: data.result || '',
           learning: data.learning || '',
-          screenshot: null,
-          tradeResult: '',
+          screenshot: data.screenshot_url,
+          assetPair: data.asset_pair || '',
           createdAt: data.created_at,
         };
         setTrades(prev => [newTrade, ...prev]);

@@ -12,7 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 
 interface Trade {
   id: string;
-  sno: string;
+  sno?: number;
   entry: string;
   reason: string;
   tp: string;
@@ -20,7 +20,7 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
-  tradeResult: string;
+  assetPair: string;
   createdAt: string;
 }
 
