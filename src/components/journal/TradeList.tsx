@@ -116,7 +116,7 @@ const TradeList = ({ trades, onDeleteTrade }: TradeListProps) => {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Trade Result</p>
-                  <p className="font-medium">{trade.tradeResult || 'N/A'}</p>
+                  <p className="font-medium">{trade.result || 'N/A'}</p>
                 </div>
               </div>
 
