@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Mail, Save, Upload } from "lucide-react";
+import { User, Mail, Save } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ProfileUpload from "@/components/profile/ProfileUpload";
+import ActivityLogs from "@/components/profile/ActivityLogs";
 
 interface Profile {
   id: string;
@@ -127,6 +128,30 @@ const ProfilePage = () => {
     }
   };
 
+  const handleAvatarUpload = async (avatarUrl: string) => {
+    if (!user || !profile) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating avatar:', error);
+        toast({
+          variant: "destructive",
+          title: "Error updating profile picture",
+          description: "Failed to update your profile picture.",
+        });
+      } else {
+        loadProfile(); // Reload to get updated data
+      }
+    } catch (error) {
+      console.error('Error saving avatar:', error);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -164,20 +189,12 @@ const ProfilePage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center space-y-4">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={profile?.avatar_url || ""} />
-                <AvatarFallback className="text-lg">
-                  {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : 
-                   formData.email ? formData.email.charAt(0).toUpperCase() : 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <Button variant="outline" className="w-full">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Photo
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Upload a profile picture to personalize your account
-              </p>
+              <ProfileUpload
+                avatarUrl={profile?.avatar_url || null}
+                fullName={formData.full_name}
+                email={formData.email}
+                onUploadComplete={handleAvatarUpload}
+              />
             </CardContent>
           </Card>
 
@@ -235,32 +252,8 @@ const ProfilePage = () => {
           </Card>
         </div>
 
-        {/* Account Statistics */}
-        <Card className="shadow-card border-border/50">
-          <CardHeader>
-            <CardTitle>Account Statistics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted/30 rounded-lg">
-                <div className="text-2xl font-bold text-primary">
-                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
-                </div>
-                <div className="text-sm text-muted-foreground">Member Since</div>
-              </div>
-              <div className="text-center p-4 bg-muted/30 rounded-lg">
-                <div className="text-2xl font-bold text-primary">
-                  {profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : 'N/A'}
-                </div>
-                <div className="text-sm text-muted-foreground">Last Updated</div>
-              </div>
-              <div className="text-center p-4 bg-muted/30 rounded-lg">
-                <div className="text-2xl font-bold text-primary">Active</div>
-                <div className="text-sm text-muted-foreground">Account Status</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Activity Logs */}
+        <ActivityLogs />
       </div>
     </div>
   );

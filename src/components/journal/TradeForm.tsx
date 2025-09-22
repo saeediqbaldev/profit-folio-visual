@@ -70,11 +70,14 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.entry || !formData.assetPair) {
+    const requiredFields = ['entry', 'assetPair', 'sl', 'tp', 'reason', 'result', 'learning'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    
+    if (missingFields.length > 0) {
       toast({
         variant: "destructive",
         title: "Missing required fields",
-        description: "Please fill in Entry and Asset Pair fields.",
+        description: `Please fill in: ${missingFields.join(', ')}`,
       });
       return;
     }
@@ -109,100 +112,118 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Asset Pair */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="sno">Serial Number</Label>
+              <Input
+                id="sno"
+                type="text"
+                value="Auto-generated"
+                disabled
+                className="h-11 bg-muted/50"
+              />
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="assetPair">Asset Pair *</Label>
-              <Select value={formData.assetPair} onValueChange={(value) => handleInputChange('assetPair', value)}>
-                <SelectTrigger>
+              <Select
+                value={formData.assetPair}
+                onValueChange={(value) => handleInputChange('assetPair', value)}
+                required
+              >
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select asset pair" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="XAUUSD">XAUUSD</SelectItem>
-                  <SelectItem value="BTCUSD">BTCUSD</SelectItem>
-                  <SelectItem value="ETHUSD">ETHUSD</SelectItem>
-                  <SelectItem value="USOIL">USOIL</SelectItem>
+                  <SelectItem value="XAUUSD">XAUUSD (Gold)</SelectItem>
+                  <SelectItem value="BTCUSD">BTCUSD (Bitcoin)</SelectItem>
+                  <SelectItem value="ETHUSD">ETHUSD (Ethereum)</SelectItem>
+                  <SelectItem value="USOIL">USOIL (Oil)</SelectItem>
                   <SelectItem value="SILVER">SILVER</SelectItem>
-                  <SelectItem value="EURUSD">EURUSD</SelectItem>
-                  <SelectItem value="GBPJPY">GBPJPY</SelectItem>
+                  <SelectItem value="EURUSD">EURUSD (Euro)</SelectItem>
+                  <SelectItem value="GBPJPY">GBPJPY (Pound/Yen)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Entry */}
             <div className="space-y-2">
               <Label htmlFor="entry">Entry Price *</Label>
               <Input
                 id="entry"
+                type="text"
+                placeholder="e.g., 1.2345"
                 value={formData.entry}
                 onChange={(e) => handleInputChange('entry', e.target.value)}
-                placeholder="Entry price"
+                className="h-11"
                 required
               />
             </div>
 
-            {/* SL */}
             <div className="space-y-2">
-              <Label htmlFor="sl">Stop Loss (SL)</Label>
+              <Label htmlFor="sl">Stop Loss *</Label>
               <Input
                 id="sl"
+                type="text"
+                placeholder="e.g., 1.2300"
                 value={formData.sl}
                 onChange={(e) => handleInputChange('sl', e.target.value)}
-                placeholder="Stop loss price"
+                className="h-11"
+                required
               />
             </div>
 
-            {/* Result */}
-            <div className="space-y-2 md:col-span-2 lg:col-span-1">
-              <Label htmlFor="result">Result</Label>
-              <Select value={formData.result} onValueChange={(value) => handleInputChange('result', value)}>
-                <SelectTrigger>
+            <div className="space-y-2">
+              <Label htmlFor="tp">Take Profits *</Label>
+              <LineNumbersTextarea
+                value={formData.tp}
+                onChange={(value) => handleInputChange('tp', value)}
+                placeholder="Enter take profit levels:&#10;TP1: 1.2400&#10;TP2: 1.2450&#10;TP3: 1.2500"
+                className="min-h-[100px]"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Trade Logic / Reason *</Label>
+              <Textarea
+                id="reason"
+                placeholder="Explain your trade logic and reason for entry..."
+                value={formData.reason}
+                onChange={(e) => handleInputChange('reason', e.target.value)}
+                className="min-h-[80px] resize-none"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="result">Trade Result *</Label>
+              <Select
+                value={formData.result}
+                onValueChange={(value) => handleInputChange('result', value)}
+                required
+              >
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select trade result" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="WIN">WIN</SelectItem>
                   <SelectItem value="LOSS">LOSS</SelectItem>
-                  <SelectItem value="BREAKEVEN">BREAKEVEN</SelectItem>
+                  <SelectItem value="BE">BE (Break Even)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Take Profit with Line Numbers */}
-          <div className="space-y-2">
-            <Label htmlFor="tp">Take Profit Levels</Label>
-            <LineNumbersTextarea
-              id="tp"
-              value={formData.tp}
-              onChange={(e) => handleInputChange('tp', e.target.value)}
-              placeholder="TP1: 2150.00&#10;TP2: 2160.00&#10;TP3: 2170.00"
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground">Enter each TP level on a new line</p>
-          </div>
-
-          {/* Reason */}
-          <div className="space-y-2">
-            <Label htmlFor="reason">Reason</Label>
-            <Textarea
-              id="reason"
-              value={formData.reason}
-              onChange={(e) => handleInputChange('reason', e.target.value)}
-              placeholder="Why did you enter this trade?"
-              rows={3}
-            />
-          </div>
-
-          {/* Learning */}
-          <div className="space-y-2">
-            <Label htmlFor="learning">Learning</Label>
-            <Textarea
-              id="learning"
-              value={formData.learning}
-              onChange={(e) => handleInputChange('learning', e.target.value)}
-              placeholder="What did you learn from this trade?"
-              rows={3}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="learning">Learning Outcome *</Label>
+              <Textarea
+                id="learning"
+                placeholder="What did you learn from this trade?"
+                value={formData.learning}
+                onChange={(e) => handleInputChange('learning', e.target.value)}
+                className="min-h-[80px] resize-none"
+                required
+              />
+            </div>
           </div>
 
           {/* Screenshot Upload */}

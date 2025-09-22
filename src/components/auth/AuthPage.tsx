@@ -66,10 +66,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          persistSession: rememberMe
-        }
       });
+
+      if (!error && rememberMe) {
+        // Set session to persist by default with remember me
+        localStorage.setItem('sb-remember-me', 'true');
+      }
 
       if (error) {
         toast({
