@@ -176,7 +176,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
               <Label htmlFor="tp">Take Profits *</Label>
               <LineNumbersTextarea
                 value={formData.tp}
-                onChange={(value) => handleInputChange('tp', value)}
+                onChange={(e) => handleInputChange('tp', e.target.value)}
                 placeholder="Enter take profit levels:&#10;TP1: 1.2400&#10;TP2: 1.2450&#10;TP3: 1.2500"
                 className="min-h-[100px]"
                 required
