@@ -25,9 +25,27 @@ const ProfileUpload = ({ avatarUrl, fullName, email, onUploadComplete }: Profile
       }
 
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
+      
+      // Security: File validation
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+      const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
+
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        throw new Error('Invalid file type. Please upload a PNG, JPG, or WEBP image.');
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error('File too large. Image must be smaller than 5MB.');
+      }
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
+        throw new Error('Invalid file extension. Allowed: png, jpg, jpeg, webp');
+      }
+
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `${fileName}`;
 
       // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -96,13 +114,13 @@ const ProfileUpload = ({ avatarUrl, fullName, email, onUploadComplete }: Profile
       <input
         id="avatar-upload"
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
         onChange={handleFileUpload}
         className="hidden"
       />
       
       <p className="text-xs text-muted-foreground text-center">
-        Upload a profile picture to personalize your account
+        Upload a profile picture (PNG, JPG, WEBP - Max 5MB)
       </p>
     </div>
   );

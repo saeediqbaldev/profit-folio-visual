@@ -8,6 +8,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
 import { Plus, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+
+// Security: Input validation schema
+const tradeSchema = z.object({
+  entry: z.string()
+    .trim()
+    .min(1, "Entry price is required")
+    .max(50, "Entry price must be less than 50 characters")
+    .regex(/^[\d.]+$/, "Entry must be a valid number"),
+  reason: z.string()
+    .trim()
+    .min(10, "Reason must be at least 10 characters")
+    .max(2000, "Reason must be less than 2000 characters"),
+  tp: z.string()
+    .trim()
+    .min(1, "Take profit is required")
+    .max(500, "Take profit must be less than 500 characters"),
+  sl: z.string()
+    .trim()
+    .min(1, "Stop loss is required")
+    .max(50, "Stop loss must be less than 50 characters")
+    .regex(/^[\d.]+$/, "Stop loss must be a valid number"),
+  result: z.enum(["WIN", "LOSS", "BE"], {
+    required_error: "Please select a trade result"
+  }),
+  learning: z.string()
+    .trim()
+    .min(10, "Learning outcome must be at least 10 characters")
+    .max(2000, "Learning outcome must be less than 2000 characters"),
+  assetPair: z.string()
+    .min(1, "Asset pair is required")
+    .max(20, "Asset pair must be less than 20 characters"),
+});
 
 interface Trade {
   id: string;
@@ -46,21 +79,35 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setFormData(prev => ({ ...prev, screenshot: e.target?.result as string }));
-        };
-        reader.readAsDataURL(file);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Invalid file type",
-          description: "Please upload a PNG or JPG image.",
-        });
-      }
+    if (!file) return;
+
+    // Security: File validation
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload a PNG, JPG, or WEBP image.",
+      });
+      return;
     }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Image must be smaller than 5MB.",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFormData(prev => ({ ...prev, screenshot: e.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeScreenshot = () => {
@@ -70,16 +117,19 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const requiredFields = ['entry', 'assetPair', 'sl', 'tp', 'reason', 'result', 'learning'];
-    const missingFields = requiredFields.filter(field => !formData[field]);
-    
-    if (missingFields.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Missing required fields",
-        description: `Please fill in: ${missingFields.join(', ')}`,
-      });
-      return;
+    // Security: Validate inputs with Zod schema
+    try {
+      tradeSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const firstError = error.errors[0];
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: firstError.message,
+        });
+        return;
+      }
     }
 
     onAddTrade(formData);

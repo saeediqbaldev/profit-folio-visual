@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Database, HardDrive, Activity, AlertTriangle, CheckCircle } from "lucide-react";
+import { Users, Database, HardDrive, Activity, AlertTriangle, CheckCircle, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface AdminStats {
   totalUsers: number;
@@ -21,6 +22,7 @@ interface SystemHealth {
 
 const AdminPage = () => {
   const { toast } = useToast();
+  const { role, loading: roleLoading, isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
@@ -115,13 +117,35 @@ const AdminPage = () => {
     );
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <span className="text-muted-foreground">Loading admin data...</span>
         </div>
+      </div>
+    );
+  }
+
+  // Security: Role-based access control
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
+        <Card className="max-w-md shadow-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <ShieldAlert className="h-5 w-5" />
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              You do not have permission to access this page. Admin privileges are required.
+            </p>
+            <Badge variant="secondary">Current Role: {role || 'user'}</Badge>
+          </CardContent>
+        </Card>
       </div>
     );
   }
