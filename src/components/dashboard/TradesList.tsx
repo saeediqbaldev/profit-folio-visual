@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Trash2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Edit, Trash2, TrendingUp, TrendingDown, Minus, Upload, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface Trade {
   id: string;
@@ -20,6 +22,7 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
+  afterTradeScreenshot: string | null;
   assetPair: string;
   createdAt: string;
 }
@@ -33,6 +36,7 @@ interface TradesListProps {
 const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) => {
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [editFormData, setEditFormData] = useState<Trade | null>(null);
+  const { toast } = useToast();
 
   const handleEditClick = (trade: Trade) => {
     setEditingTrade(trade);
@@ -42,6 +46,46 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) =
   const handleEditInputChange = (field: keyof Trade, value: string) => {
     if (editFormData) {
       setEditFormData({ ...editFormData, [field]: value });
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload a PNG, JPG, or WEBP image.",
+      });
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Image must be smaller than 5MB.",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (editFormData) {
+        setEditFormData({ ...editFormData, [field]: e.target?.result as string });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeScreenshot = (field: 'screenshot' | 'afterTradeScreenshot') => {
+    if (editFormData) {
+      setEditFormData({ ...editFormData, [field]: null });
     }
   };
 
@@ -134,12 +178,40 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) =
                       <form onSubmit={handleEditSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="edit-entry">Entry</Label>
+                            <Label htmlFor="edit-assetPair">Asset Pair</Label>
+                            <Select 
+                              value={editFormData.assetPair} 
+                              onValueChange={(value) => handleEditInputChange('assetPair', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select asset pair" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="XAUUSD">XAUUSD (Gold)</SelectItem>
+                                <SelectItem value="BTCUSD">BTCUSD (Bitcoin)</SelectItem>
+                                <SelectItem value="ETHUSD">ETHUSD (Ethereum)</SelectItem>
+                                <SelectItem value="USOIL">USOIL (Oil)</SelectItem>
+                                <SelectItem value="SILVER">SILVER</SelectItem>
+                                <SelectItem value="EURUSD">EURUSD (Euro)</SelectItem>
+                                <SelectItem value="GBPJPY">GBPJPY (Pound/Yen)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-entry">Entry Price</Label>
                             <Input
                               id="edit-entry"
                               value={editFormData.entry}
                               onChange={(e) => handleEditInputChange('entry', e.target.value)}
                               required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-sl">Stop Loss</Label>
+                            <Input
+                              id="edit-sl"
+                              value={editFormData.sl}
+                              onChange={(e) => handleEditInputChange('sl', e.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
@@ -154,29 +226,24 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) =
                               <SelectContent>
                                 <SelectItem value="WIN">WIN</SelectItem>
                                 <SelectItem value="LOSS">LOSS</SelectItem>
-                                <SelectItem value="BREAKEVEN">BREAKEVEN</SelectItem>
+                                <SelectItem value="BE">BE (Break Even)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-tp">Take Profit</Label>
-                            <Input
-                              id="edit-tp"
-                              value={editFormData.tp}
-                              onChange={(e) => handleEditInputChange('tp', e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-sl">Stop Loss</Label>
-                            <Input
-                              id="edit-sl"
-                              value={editFormData.sl}
-                              onChange={(e) => handleEditInputChange('sl', e.target.value)}
-                            />
-                          </div>
                         </div>
+                        
                         <div className="space-y-2">
-                          <Label htmlFor="edit-reason">Reason</Label>
+                          <Label htmlFor="edit-tp">Take Profits</Label>
+                          <LineNumbersTextarea
+                            value={editFormData.tp}
+                            onChange={(e) => handleEditInputChange('tp', e.target.value)}
+                            placeholder="Enter take profit levels"
+                            className="min-h-[100px]"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-reason">Trade Logic / Reason</Label>
                           <Textarea
                             id="edit-reason"
                             value={editFormData.reason}
@@ -184,8 +251,9 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) =
                             rows={3}
                           />
                         </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="edit-learning">Learning</Label>
+                          <Label htmlFor="edit-learning">Learning Outcome</Label>
                           <Textarea
                             id="edit-learning"
                             value={editFormData.learning}
@@ -193,6 +261,93 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) =
                             rows={3}
                           />
                         </div>
+
+                        {/* Setup Screenshot */}
+                        <div className="space-y-2">
+                          <Label>Setup Screenshot</Label>
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => document.getElementById('edit-screenshot')?.click()}
+                                className="flex items-center gap-2"
+                              >
+                                <Upload className="h-4 w-4" />
+                                Upload Image
+                              </Button>
+                            </div>
+                            <input
+                              id="edit-screenshot"
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg"
+                              onChange={(e) => handleFileUpload(e, 'screenshot')}
+                              className="hidden"
+                            />
+                            {editFormData.screenshot && (
+                              <div className="relative inline-block">
+                                <img
+                                  src={editFormData.screenshot}
+                                  alt="Setup screenshot"
+                                  className="max-w-full max-h-48 rounded-lg border border-border shadow-sm"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                                  onClick={() => removeScreenshot('screenshot')}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* After Trade Screenshot */}
+                        <div className="space-y-2">
+                          <Label>After Trade Screenshot</Label>
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => document.getElementById('edit-after-screenshot')?.click()}
+                                className="flex items-center gap-2"
+                              >
+                                <Upload className="h-4 w-4" />
+                                Upload Image
+                              </Button>
+                            </div>
+                            <input
+                              id="edit-after-screenshot"
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg"
+                              onChange={(e) => handleFileUpload(e, 'afterTradeScreenshot')}
+                              className="hidden"
+                            />
+                            {editFormData.afterTradeScreenshot && (
+                              <div className="relative inline-block">
+                                <img
+                                  src={editFormData.afterTradeScreenshot}
+                                  alt="After trade screenshot"
+                                  className="max-w-full max-h-48 rounded-lg border border-border shadow-sm"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                                  onClick={() => removeScreenshot('afterTradeScreenshot')}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="flex justify-end gap-2">
                           <Button type="button" variant="outline" onClick={() => setEditingTrade(null)}>
                             Cancel

@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import TradeForm from "@/components/journal/TradeForm";
-import TradeList from "@/components/journal/TradeList";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,66 +14,14 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
+  afterTradeScreenshot: string | null;
   assetPair: string;
   createdAt: string;
 }
 
 const JournalPage = () => {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
-
-  // Load trades from Supabase on component mount
-  useEffect(() => {
-    const loadTrades = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('trades')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error loading trades:', error);
-          toast({
-            variant: "destructive",
-            title: "Error loading trades",
-            description: "Failed to load your trades from the database.",
-          });
-        } else {
-          // Transform Supabase data to match frontend interface
-          const transformedTrades = data.map(trade => ({
-            id: trade.id,
-            sno: trade.sno,
-            entry: trade.entry,
-            reason: trade.reason || '',
-            tp: trade.tp || '',
-            sl: trade.sl || '',
-            result: trade.result || '',
-            learning: trade.learning || '',
-            screenshot: trade.screenshot_url,
-            assetPair: trade.asset_pair || '',
-            createdAt: trade.created_at,
-          }));
-          setTrades(transformedTrades);
-        }
-      } catch (error) {
-        console.error('Error loading trades:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "An unexpected error occurred while loading trades.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTrades();
-  }, [user, toast]);
 
   const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt' | 'sno'>) => {
     if (!user) return;
@@ -92,6 +39,7 @@ const JournalPage = () => {
           learning: tradeData.learning,
           asset_pair: tradeData.assetPair,
           screenshot_url: tradeData.screenshot,
+          after_trade_screenshot_url: tradeData.afterTradeScreenshot,
         })
         .select()
         .single();
@@ -104,21 +52,6 @@ const JournalPage = () => {
           description: "Failed to save the trade to the database.",
         });
       } else {
-        // Transform and add to local state
-        const newTrade: Trade = {
-          id: data.id,
-          sno: data.sno,
-          entry: data.entry,
-          reason: data.reason || '',
-          tp: data.tp || '',
-          sl: data.sl || '',
-          result: data.result || '',
-          learning: data.learning || '',
-          screenshot: data.screenshot_url,
-          assetPair: data.asset_pair || '',
-          createdAt: data.created_at,
-        };
-        setTrades(prev => [newTrade, ...prev]);
         toast({
           title: "Trade added",
           description: "Your trade has been successfully saved.",
@@ -134,50 +67,6 @@ const JournalPage = () => {
     }
   };
 
-  const handleDeleteTrade = async (id: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('trades')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error deleting trade:', error);
-        toast({
-          variant: "destructive",
-          title: "Error deleting trade",
-          description: "Failed to delete the trade from the database.",
-        });
-      } else {
-        setTrades(prev => prev.filter(trade => trade.id !== id));
-        toast({
-          title: "Trade deleted",
-          description: "The trade has been successfully removed.",
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting trade:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred while deleting the trade.",
-      });
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-muted-foreground">Loading your trades...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
@@ -192,7 +81,6 @@ const JournalPage = () => {
         </div>
 
         <TradeForm onAddTrade={handleAddTrade} />
-        <TradeList trades={trades} onDeleteTrade={handleDeleteTrade} />
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
+  afterTradeScreenshot: string | null;
   assetPair: string;
   createdAt: string;
 }
@@ -61,6 +62,7 @@ const DashboardPage = () => {
             result: trade.result || '',
             learning: trade.learning || '',
             screenshot: trade.screenshot_url,
+            afterTradeScreenshot: trade.after_trade_screenshot_url,
             assetPair: trade.asset_pair || '',
             createdAt: trade.created_at,
           }));
@@ -96,6 +98,7 @@ const DashboardPage = () => {
           learning: updatedTrade.learning,
           asset_pair: updatedTrade.assetPair,
           screenshot_url: updatedTrade.screenshot,
+          after_trade_screenshot_url: updatedTrade.afterTradeScreenshot,
         })
         .eq('id', updatedTrade.id)
         .eq('user_id', user.id);

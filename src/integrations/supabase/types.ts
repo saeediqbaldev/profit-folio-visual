@@ -76,6 +76,7 @@ export type Database = {
       }
       trades: {
         Row: {
+          after_trade_screenshot_url: string | null
           asset_pair: string | null
           created_at: string
           entry: string
@@ -91,6 +92,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          after_trade_screenshot_url?: string | null
           asset_pair?: string | null
           created_at?: string
           entry: string
@@ -106,6 +108,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          after_trade_screenshot_url?: string | null
           asset_pair?: string | null
           created_at?: string
           entry?: string

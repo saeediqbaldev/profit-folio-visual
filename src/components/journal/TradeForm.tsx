@@ -52,6 +52,7 @@ interface Trade {
   result: string;
   learning: string;
   screenshot: string | null;
+  afterTradeScreenshot: string | null;
   assetPair: string;
   createdAt: string;
 }
@@ -70,6 +71,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     result: "",
     learning: "",
     screenshot: null as string | null,
+    afterTradeScreenshot: null as string | null,
     assetPair: "",
   });
 
@@ -110,8 +112,45 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     reader.readAsDataURL(file);
   };
 
+  const handleAfterTradeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Security: File validation
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload a PNG, JPG, or WEBP image.",
+      });
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Image must be smaller than 5MB.",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFormData(prev => ({ ...prev, afterTradeScreenshot: e.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const removeScreenshot = () => {
     setFormData(prev => ({ ...prev, screenshot: null }));
+  };
+
+  const removeAfterTradeScreenshot = () => {
+    setFormData(prev => ({ ...prev, afterTradeScreenshot: null }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -143,6 +182,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       result: "",
       learning: "",
       screenshot: null,
+      afterTradeScreenshot: null,
       assetPair: "",
     });
 
@@ -276,9 +316,9 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
             </div>
           </div>
 
-          {/* Screenshot Upload */}
+          {/* Setup Screenshot Upload */}
           <div className="space-y-2">
-            <Label htmlFor="screenshot">Screenshot</Label>
+            <Label htmlFor="screenshot">Setup Screenshot</Label>
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <Button
@@ -304,10 +344,9 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                 <div className="relative inline-block">
                   <img
                     src={formData.screenshot}
-                    alt="Trade screenshot"
+                    alt="Setup screenshot"
                     className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
-                      // This will be handled by the lightbox component
                       const event = new CustomEvent('openLightbox', { detail: formData.screenshot });
                       window.dispatchEvent(event);
                     }}
@@ -318,6 +357,55 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                     size="icon"
                     className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
                     onClick={removeScreenshot}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* After Trade Screenshot Upload */}
+          <div className="space-y-2">
+            <Label htmlFor="afterTradeScreenshot">After Trade Screenshot</Label>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('afterTradeScreenshot')?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Image
+                </Button>
+                <span className="text-sm text-muted-foreground">PNG, JPG only</span>
+              </div>
+              <input
+                id="afterTradeScreenshot"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={handleAfterTradeFileUpload}
+                className="hidden"
+              />
+              
+              {formData.afterTradeScreenshot && (
+                <div className="relative inline-block">
+                  <img
+                    src={formData.afterTradeScreenshot}
+                    alt="After trade screenshot"
+                    className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      const event = new CustomEvent('openLightbox', { detail: formData.afterTradeScreenshot });
+                      window.dispatchEvent(event);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                    onClick={removeAfterTradeScreenshot}
                   >
                     <X className="h-3 w-3" />
                   </Button>
