@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,18 +39,16 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
   const [editFormData, setEditFormData] = useState<Trade | null>(null);
   const { toast } = useToast();
 
-  const handleEditClick = (trade: Trade) => {
+  const handleEditClick = useCallback((trade: Trade) => {
     setEditingTrade(trade);
     setEditFormData({ ...trade });
-  };
+  }, []);
 
-  const handleEditInputChange = (field: keyof Trade, value: string) => {
-    if (editFormData) {
-      setEditFormData({ ...editFormData, [field]: value });
-    }
-  };
+  const handleEditInputChange = useCallback((field: keyof Trade, value: string) => {
+    setEditFormData(prev => prev ? { ...prev, [field]: value } : null);
+  }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -82,24 +80,22 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
       }
     };
     reader.readAsDataURL(file);
-  };
+  }, [toast]);
 
-  const removeScreenshot = (field: 'screenshot' | 'afterTradeScreenshot') => {
-    if (editFormData) {
-      setEditFormData({ ...editFormData, [field]: null });
-    }
-  };
+  const removeScreenshot = useCallback((field: 'screenshot' | 'afterTradeScreenshot') => {
+    setEditFormData(prev => prev ? { ...prev, [field]: null } : null);
+  }, []);
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (editFormData) {
       onUpdateTrade(editFormData);
       setEditingTrade(null);
       setEditFormData(null);
     }
-  };
+  }, [editFormData, onUpdateTrade]);
 
-  const getResultIcon = (result: string) => {
+  const getResultIcon = useCallback((result: string) => {
     switch (result) {
       case 'WIN':
         return <TrendingUp className="h-4 w-4 text-success" />;
@@ -110,9 +106,9 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
       default:
         return null;
     }
-  };
+  }, []);
 
-  const getResultBadge = (result: string) => {
+  const getResultBadge = useCallback((result: string) => {
     switch (result) {
       case 'WIN':
         return <Badge className="bg-success/10 text-success border-success/20">WIN</Badge>;
@@ -123,7 +119,7 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
       default:
         return <Badge variant="outline">{result || 'N/A'}</Badge>;
     }
-  };
+  }, []);
 
   if (trades.length === 0) {
     return (

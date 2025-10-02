@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ interface AdvancedChartsProps {
 type ChartType = 'line' | 'bar' | 'pie' | 'area';
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
-const AdvancedCharts = ({ trades }: AdvancedChartsProps) => {
+const AdvancedCharts = memo(({ trades }: AdvancedChartsProps) => {
   const [chartType, setChartType] = useState<ChartType>('line');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('monthly');
 
@@ -122,10 +122,10 @@ const AdvancedCharts = ({ trades }: AdvancedChartsProps) => {
     ].filter(item => item.value > 0);
   };
 
-  const timeSeriesData = generateTimeSeriesData(trades, timeFilter);
-  const pieData = generatePieData(trades);
+  const timeSeriesData = useMemo(() => generateTimeSeriesData(trades, timeFilter), [trades, timeFilter]);
+  const pieData = useMemo(() => generatePieData(trades), [trades, timeFilter]);
 
-  const renderChart = () => {
+  const renderChart = useCallback(() => {
     const commonProps = {
       width: '100%',
       height: 400,
@@ -267,19 +267,19 @@ const AdvancedCharts = ({ trades }: AdvancedChartsProps) => {
       default:
         return null;
     }
-  };
+  }, [chartType, timeSeriesData, pieData]);
 
-  const getWinRate = () => {
+  const getWinRate = useCallback(() => {
     const filteredTrades = filterTradesByTime(trades, timeFilter);
     const wins = filteredTrades.filter(t => t.result === 'WIN').length;
     const losses = filteredTrades.filter(t => t.result === 'LOSS').length;
     const total = wins + losses;
     return total > 0 ? ((wins / total) * 100).toFixed(1) : '0';
-  };
+  }, [trades, timeFilter]);
 
-  const getTotalTrades = () => {
+  const getTotalTrades = useCallback(() => {
     return filterTradesByTime(trades, timeFilter).length;
-  };
+  }, [trades, timeFilter]);
 
   if (trades.length === 0) {
     return (
@@ -364,6 +364,8 @@ const AdvancedCharts = ({ trades }: AdvancedChartsProps) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+AdvancedCharts.displayName = 'AdvancedCharts';
 
 export default AdvancedCharts;

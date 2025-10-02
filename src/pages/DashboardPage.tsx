@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import StatsCards from "@/components/dashboard/StatsCards";
 import TradeChart from "@/components/dashboard/TradeChart";
 import TradesList from "@/components/dashboard/TradesList";
@@ -87,7 +87,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
     loadTrades();
   }, [user, toast]);
 
-  const handleUpdateTrade = async (updatedTrade: Trade) => {
+  const handleUpdateTrade = useCallback(async (updatedTrade: Trade) => {
     if (!user) return;
 
     try {
@@ -131,9 +131,9 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
         description: "An unexpected error occurred while updating the trade.",
       });
     }
-  };
+  }, [user, toast]);
 
-  const handleDeleteTrade = async (id: string) => {
+  const handleDeleteTrade = useCallback(async (id: string) => {
     if (!user) return;
 
     try {
@@ -165,7 +165,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
         description: "An unexpected error occurred while deleting the trade.",
       });
     }
-  };
+  }, [user, toast]);
 
   if (loading) {
     return (

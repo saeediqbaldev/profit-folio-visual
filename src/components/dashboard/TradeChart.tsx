@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
@@ -12,8 +13,8 @@ interface TradeChartProps {
   trades: Trade[];
 }
 
-const TradeChart = ({ trades }: TradeChartProps) => {
-  const calculatePieData = () => {
+const TradeChart = memo(({ trades }: TradeChartProps) => {
+  const pieData = useMemo(() => {
     const winningTrades = trades.filter(trade => 
       trade.result === 'WIN'
     ).length;
@@ -31,9 +32,9 @@ const TradeChart = ({ trades }: TradeChartProps) => {
       { name: 'Losing', value: losingTrades, color: 'hsl(var(--danger))' },
       { name: 'Breakeven', value: breakevenTrades, color: 'hsl(var(--muted-foreground))' },
     ].filter(item => item.value > 0);
-  };
+  }, [trades]);
 
-  const calculateMonthlyData = () => {
+  const monthlyData = useMemo(() => {
     const monthlyStats: { [key: string]: { wins: number; losses: number } } = {};
 
     trades.forEach(trade => {
@@ -58,10 +59,7 @@ const TradeChart = ({ trades }: TradeChartProps) => {
         wins: stats.wins,
         losses: stats.losses,
       }));
-  };
-
-  const pieData = calculatePieData();
-  const monthlyData = calculateMonthlyData();
+  }, [trades]);
 
   const renderCustomTooltip = (props: any) => {
     const { active, payload, label } = props;
@@ -144,6 +142,8 @@ const TradeChart = ({ trades }: TradeChartProps) => {
       </Card>
     </div>
   );
-};
+});
+
+TradeChart.displayName = 'TradeChart';
 
 export default TradeChart;

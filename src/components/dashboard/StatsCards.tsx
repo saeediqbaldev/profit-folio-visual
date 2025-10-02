@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Target, BarChart3 } from "lucide-react";
 
@@ -14,8 +15,8 @@ interface StatsCardsProps {
   trades: Trade[];
 }
 
-const StatsCards = ({ trades }: StatsCardsProps) => {
-  const calculateStats = () => {
+const StatsCards = memo(({ trades }: StatsCardsProps) => {
+  const stats = useMemo(() => {
     if (trades.length === 0) {
       return {
         totalTrades: 0,
@@ -41,11 +42,9 @@ const StatsCards = ({ trades }: StatsCardsProps) => {
       losingTrades,
       winRate,
     };
-  };
+  }, [trades]);
 
-  const stats = calculateStats();
-
-  const statCards = [
+  const statCards = useMemo(() => [
     {
       title: "Total Trades",
       value: stats.totalTrades,
@@ -74,7 +73,7 @@ const StatsCards = ({ trades }: StatsCardsProps) => {
       color: stats.winRate >= 50 ? "text-success" : "text-danger",
       bgColor: stats.winRate >= 50 ? "bg-success/10" : "bg-danger/10",
     },
-  ];
+  ], [stats]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -100,6 +99,8 @@ const StatsCards = ({ trades }: StatsCardsProps) => {
       })}
     </div>
   );
-};
+});
+
+StatsCards.displayName = 'StatsCards';
 
 export default StatsCards;

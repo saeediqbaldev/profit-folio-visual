@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,11 +37,18 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     loadTrade();
-  }, [tradeId]);
+  }, [tradeId, user]);
 
   const loadTrade = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -86,7 +93,7 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
     }
   };
 
-  const handleFileUpload = async (file: File, field: 'screenshot' | 'afterTradeScreenshot') => {
+  const handleFileUpload = useCallback(async (file: File, field: 'screenshot' | 'afterTradeScreenshot') => {
     if (!user || !trade) return;
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
@@ -138,13 +145,13 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
         description: "Failed to upload screenshot.",
       });
     }
-  };
+  }, [user, trade, tradeId, toast]);
 
-  const handleRemoveScreenshot = (field: 'screenshot' | 'afterTradeScreenshot') => {
+  const handleRemoveScreenshot = useCallback((field: 'screenshot' | 'afterTradeScreenshot') => {
     setTrade(prev => prev ? { ...prev, [field]: null } : null);
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!user || !trade) return;
 
     setSaving(true);
@@ -188,7 +195,7 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [user, trade, toast]);
 
   if (loading) {
     return (
