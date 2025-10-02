@@ -8,7 +8,7 @@ import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Trash2, TrendingUp, TrendingDown, Minus, Upload, X } from "lucide-react";
+import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Minus, Upload, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,9 +31,10 @@ interface TradesListProps {
   trades: Trade[];
   onUpdateTrade: (trade: Trade) => void;
   onDeleteTrade: (id: string) => void;
+  onViewTrade: (tradeId: string) => void;
 }
 
-const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) => {
+const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: TradesListProps) => {
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [editFormData, setEditFormData] = useState<Trade | null>(null);
   const { toast } = useToast();
@@ -160,6 +161,14 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade }: TradesListProps) =
               </div>
               <div className="flex items-center gap-2">
                 {getResultBadge(trade.result)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewTrade(trade.id)}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  View
+                </Button>
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button

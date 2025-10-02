@@ -10,6 +10,7 @@ import JournalPage from "@/pages/JournalPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
+import TradePage from "@/pages/TradePage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,6 +19,7 @@ const queryClient = new QueryClient();
 const App = () => {
   const { user, loading, signOut, isAuthenticated } = useAuth();
   const [currentPage, setCurrentPage] = useState("journal");
+  const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await signOut();
@@ -26,6 +28,14 @@ const App = () => {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
+    if (page !== "trade") {
+      setSelectedTradeId(null);
+    }
+  };
+
+  const handleViewTrade = (tradeId: string) => {
+    setSelectedTradeId(tradeId);
+    setCurrentPage("trade");
   };
 
   if (loading) {
@@ -72,9 +82,12 @@ const App = () => {
               onLogout={handleLogout}
             />
             {currentPage === "journal" && <JournalPage />}
-            {currentPage === "dashboard" && <DashboardPage />}
+            {currentPage === "dashboard" && <DashboardPage onViewTrade={handleViewTrade} />}
             {currentPage === "profile" && <ProfilePage />}
             {currentPage === "admin" && <AdminPage />}
+            {currentPage === "trade" && selectedTradeId && (
+              <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("dashboard")} />
+            )}
             <Lightbox />
           </div>
         </TooltipProvider>

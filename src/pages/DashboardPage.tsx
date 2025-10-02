@@ -22,7 +22,11 @@ interface Trade {
   createdAt: string;
 }
 
-const DashboardPage = () => {
+interface DashboardPageProps {
+  onViewTrade: (tradeId: string) => void;
+}
+
+const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -193,6 +197,7 @@ const DashboardPage = () => {
           trades={trades} 
           onUpdateTrade={handleUpdateTrade}
           onDeleteTrade={handleDeleteTrade}
+          onViewTrade={onViewTrade}
         />
       </div>
     </div>
