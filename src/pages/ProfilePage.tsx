@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Mail, Save } from "lucide-react";
+import { User, Mail, Save, Download, Upload, Phone, Lock, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileUpload from "@/components/profile/ProfileUpload";
 import ActivityLogs from "@/components/profile/ActivityLogs";
+import { exportToCSV } from "@/utils/exportData";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Profile {
   id: string;
@@ -29,7 +31,14 @@ const ProfilePage = () => {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
+    phone: "",
   });
+  const [passwordData, setPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -59,6 +68,7 @@ const ProfilePage = () => {
         setFormData({
           full_name: data.full_name || "",
           email: data.email || user.email || "",
+          phone: user.phone || "",
         });
       } else {
         // Create profile if it doesn't exist
@@ -79,6 +89,7 @@ const ProfilePage = () => {
           setFormData({
             full_name: "",
             email: user.email || "",
+            phone: user.phone || "",
           });
         }
       }
@@ -156,6 +167,183 @@ const ProfilePage = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleExportRecords = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedTrades = data.map((trade, index) => ({
+        id: trade.id,
+        sno: trade.sno || index + 1,
+        entry: trade.entry,
+        reason: trade.reason || '',
+        tp: trade.tp || '',
+        sl: trade.sl || '',
+        result: trade.result || '',
+        learning: trade.learning || '',
+        assetPair: trade.asset_pair || '',
+        createdAt: trade.created_at,
+      }));
+
+      exportToCSV(formattedTrades);
+      
+      toast({
+        title: "Export successful",
+        description: "Your trade records have been exported.",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Failed to export trade records.",
+      });
+    }
+  };
+
+  const handleImportRecords = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !event.target.files || event.target.files.length === 0) return;
+
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const rows = text.split('\n').filter(row => row.trim());
+        
+        // Find the header row
+        const headerIndex = rows.findIndex(row => row.includes('S.No') || row.includes('Asset Pair'));
+        if (headerIndex === -1) {
+          throw new Error('Invalid CSV format');
+        }
+
+        const dataRows = rows.slice(headerIndex + 1);
+        const trades = dataRows.map(row => {
+          const values = row.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+          const snoValue = parseInt(values[0]) || 0;
+          if (snoValue === 0) return null;
+          
+          return {
+            user_id: user.id,
+            asset_pair: values[1] || '',
+            entry: values[2] || '',
+            tp: values[3] || '',
+            sl: values[4] || '',
+            result: values[5] || '',
+            reason: values[6] || '',
+            learning: values[7] || '',
+          };
+        }).filter((trade): trade is NonNullable<typeof trade> => trade !== null);
+
+        const { error } = await supabase
+          .from('trades')
+          .insert(trades);
+
+        if (error) throw error;
+
+        toast({
+          title: "Import successful",
+          description: `${trades.length} trade records have been imported.`,
+        });
+      } catch (error) {
+        console.error('Import error:', error);
+        toast({
+          variant: "destructive",
+          title: "Import failed",
+          description: "Failed to import trade records. Please check the file format.",
+        });
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Passwords don't match",
+        description: "Please make sure both passwords match.",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 6 characters.",
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully changed.",
+      });
+      
+      setPasswordData({ newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Password change failed",
+        description: error.message,
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    setDeleting(true);
+    try {
+      // Delete user's data first
+      await supabase.from('trades').delete().eq('user_id', user.id);
+      await supabase.from('profiles').delete().eq('user_id', user.id);
+      await supabase.from('activity_logs').delete().eq('user_id', user.id);
+      
+      // Delete auth user
+      const { error } = await supabase.auth.admin.deleteUser(user.id);
+      
+      if (error) throw error;
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      
+      // Sign out
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Deletion failed",
+        description: "Failed to delete account. Please contact support.",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
@@ -227,6 +415,16 @@ const ProfilePage = () => {
                     placeholder="Enter your email"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    placeholder="Enter your phone number"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end">
@@ -251,6 +449,128 @@ const ProfilePage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Data Management */}
+        <Card className="shadow-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Data Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleExportRecords} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export Trade Records
+              </Button>
+              
+              <label htmlFor="import-file">
+                <Button variant="outline" asChild>
+                  <span className="cursor-pointer">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Trade Records
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="import-file"
+                type="file"
+                accept=".csv"
+                onChange={handleImportRecords}
+                className="hidden"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Export your trade records to CSV or import previous records from a CSV file.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Security Settings */}
+        <Card className="shadow-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Security Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new_password">New Password</Label>
+                  <Input
+                    id="new_password"
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    placeholder="Enter new password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm_password">Confirm Password</Label>
+                  <Input
+                    id="confirm_password"
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handleChangePassword}
+                disabled={changingPassword || !passwordData.newPassword}
+                variant="outline"
+              >
+                {changingPassword ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-2" />
+                    Changing...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Change Password
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="pt-6 border-t">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
+                <p className="text-sm text-muted-foreground">
+                  Once you delete your account, there is no going back. Please be certain.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={deleting}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your account
+                        and remove all your data from our servers including all trade records.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete Account
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Activity Logs */}
         <ActivityLogs />

@@ -92,27 +92,41 @@ const TradingOverviewPage = () => {
     return statsMap;
   }, [trades]);
 
-  const getDateColor = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const stats = getDayStats.get(dateStr);
-    
-    if (!stats || stats.total === 0) return "";
+  const modifiers = useMemo(() => {
+    const bookedDays: Date[] = [];
+    getDayStats.forEach((_, dateStr) => {
+      bookedDays.push(parseISO(dateStr));
+    });
+    return { booked: bookedDays };
+  }, [getDayStats]);
 
-    const winRate = stats.wins / stats.total;
-    const lossRate = stats.losses / stats.total;
-
-    if (winRate > lossRate) {
-      if (winRate >= 0.8) return "bg-green-500/80 text-white hover:bg-green-600/80";
-      if (winRate >= 0.6) return "bg-green-400/70 text-white hover:bg-green-500/70";
-      return "bg-green-300/60 hover:bg-green-400/60";
-    } else if (lossRate > winRate) {
-      if (lossRate >= 0.8) return "bg-red-500/80 text-white hover:bg-red-600/80";
-      if (lossRate >= 0.6) return "bg-red-400/70 text-white hover:bg-red-500/70";
-      return "bg-red-300/60 hover:bg-red-400/60";
-    }
+  const modifiersClassNames = useMemo(() => {
+    const classNames: Record<string, string> = {};
     
-    return "bg-gray-400/60 hover:bg-gray-500/60";
-  };
+    getDayStats.forEach((stats, dateStr) => {
+      if (stats.total === 0) return;
+      
+      const winRate = stats.wins / stats.total;
+      const lossRate = stats.losses / stats.total;
+
+      let className = "";
+      if (winRate > lossRate) {
+        if (winRate >= 0.8) className = "bg-green-500/80 text-white hover:bg-green-600/80 font-bold";
+        else if (winRate >= 0.6) className = "bg-green-400/70 text-white hover:bg-green-500/70 font-semibold";
+        else className = "bg-green-300/60 hover:bg-green-400/60";
+      } else if (lossRate > winRate) {
+        if (lossRate >= 0.8) className = "bg-red-500/80 text-white hover:bg-red-600/80 font-bold";
+        else if (lossRate >= 0.6) className = "bg-red-400/70 text-white hover:bg-red-500/70 font-semibold";
+        else className = "bg-red-300/60 hover:bg-red-400/60";
+      } else {
+        className = "bg-gray-400/60 hover:bg-gray-500/60";
+      }
+      
+      classNames[dateStr] = className;
+    });
+    
+    return classNames;
+  }, [getDayStats]);
 
   const currentStats = useMemo(() => {
     const stats = { total: 0, wins: 0, losses: 0, breakeven: 0 };
@@ -182,13 +196,49 @@ const TradingOverviewPage = () => {
                 {viewMode === "daily" && "Select a day to view details"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-center">
-              <div className="calendar-wrapper">
+            <CardContent className="flex justify-center p-6">
+              <style>{`
+                .calendar-wrapper .rdp {
+                  --rdp-cell-size: 60px;
+                  --rdp-accent-color: hsl(var(--primary));
+                  margin: 0;
+                }
+                .calendar-wrapper .rdp-months {
+                  width: 100%;
+                }
+                .calendar-wrapper .rdp-month {
+                  width: 100%;
+                }
+                .calendar-wrapper .rdp-table {
+                  width: 100%;
+                  max-width: none;
+                }
+                .calendar-wrapper .rdp-cell {
+                  width: 60px;
+                  height: 60px;
+                  padding: 2px;
+                }
+                .calendar-wrapper .rdp-day {
+                  width: 56px;
+                  height: 56px;
+                  font-size: 14px;
+                  border-radius: 8px;
+                  position: relative;
+                }
+                .calendar-wrapper .rdp-day_selected {
+                  background-color: hsl(var(--primary));
+                  color: hsl(var(--primary-foreground));
+                  font-weight: bold;
+                }
+              `}</style>
+              <div className="calendar-wrapper w-full">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
-                  className="rounded-md border"
+                  className="rounded-md border-0 w-full"
+                  modifiers={modifiers}
+                  modifiersClassNames={modifiersClassNames}
                 />
               </div>
             </CardContent>
