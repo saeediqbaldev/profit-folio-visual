@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, TrendingUp, LogOut, BarChart3, PenTool, User, Settings } from "lucide-react";
+import { Moon, Sun, TrendingUp, LogOut, BarChart3, PenTool, User, Settings, Calendar } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -17,6 +17,7 @@ const Navbar = ({ currentPage, onNavigate, onLogout }: NavbarProps) => {
   const navigation = [
     { id: "journal", label: "Add Trades", icon: PenTool },
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "overview", label: "Overview", icon: Calendar },
     { id: "profile", label: "Profile", icon: User },
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Settings }] : []),
   ];

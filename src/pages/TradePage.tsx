@@ -319,7 +319,10 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
                   <img
                     src={trade.screenshot}
                     alt="Trade setup"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('openLightbox', { detail: trade.screenshot }));
+                    }}
                   />
                   <Button
                     variant="destructive"
@@ -357,7 +360,10 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
                   <img
                     src={trade.afterTradeScreenshot}
                     alt="After trade"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('openLightbox', { detail: trade.afterTradeScreenshot }));
+                    }}
                   />
                   <Button
                     variant="destructive"

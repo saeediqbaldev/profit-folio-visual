@@ -11,6 +11,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
 import TradePage from "@/pages/TradePage";
+import TradingOverviewPage from "@/pages/TradingOverviewPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -83,6 +84,7 @@ const App = () => {
             />
             {currentPage === "journal" && <JournalPage />}
             {currentPage === "dashboard" && <DashboardPage onViewTrade={handleViewTrade} />}
+            {currentPage === "overview" && <TradingOverviewPage />}
             {currentPage === "profile" && <ProfilePage />}
             {currentPage === "admin" && <AdminPage />}
             {currentPage === "trade" && selectedTradeId && (
