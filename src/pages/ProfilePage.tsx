@@ -105,34 +105,37 @@ const ProfilePage = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      // Update profile in database
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name,
           email: formData.email,
+          phone: formData.phone,
         })
         .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error updating profile:', error);
-        toast({
-          variant: "destructive",
-          title: "Error updating profile",
-          description: "Failed to update your profile information.",
+      if (profileError) throw profileError;
+
+      // Update email in auth if changed
+      if (formData.email !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: formData.email
         });
-      } else {
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been successfully updated.",
-        });
-        loadProfile(); // Reload to get updated data
+        if (emailError) throw emailError;
       }
-    } catch (error) {
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+      loadProfile();
+    } catch (error: any) {
       console.error('Error saving profile:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred while saving.",
+        title: "Error updating profile",
+        description: error.message || "Failed to update your profile information.",
       });
     } finally {
       setSaving(false);
@@ -320,20 +323,28 @@ const ProfilePage = () => {
       await supabase.from('profiles').delete().eq('user_id', user.id);
       await supabase.from('activity_logs').delete().eq('user_id', user.id);
       
-      // Delete auth user
-      const { error } = await supabase.auth.admin.deleteUser(user.id);
+      // Delete storage files if any
+      const { data: files } = await supabase.storage
+        .from('Trading Journal Bucket')
+        .list(`${user.id}`);
       
-      if (error) throw error;
+      if (files && files.length > 0) {
+        const filePaths = files.map(file => `${user.id}/${file.name}`);
+        await supabase.storage
+          .from('Trading Journal Bucket')
+          .remove(filePaths);
+      }
 
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted.",
       });
       
-      // Sign out
+      // Sign out - this will delete the user session
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch (error: any) {
+      console.error('Delete account error:', error);
       toast({
         variant: "destructive",
         title: "Deletion failed",

@@ -130,15 +130,27 @@ const TradingOverviewPage = () => {
 
   const currentStats = useMemo(() => {
     const stats = { total: 0, wins: 0, losses: 0, breakeven: 0 };
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const dayStats = getDayStats.get(dateStr);
     
-    if (dayStats) {
-      return dayStats;
+    if (viewMode === 'daily') {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const dayStats = getDayStats.get(dateStr);
+      return dayStats || stats;
     }
     
+    // For weekly and monthly views, aggregate stats across the range
+    const { start, end } = getDateRange;
+    getDayStats.forEach((dayStats, dateStr) => {
+      const date = parseISO(dateStr);
+      if (date >= start && date <= end) {
+        stats.total += dayStats.total;
+        stats.wins += dayStats.wins;
+        stats.losses += dayStats.losses;
+        stats.breakeven += dayStats.breakeven;
+      }
+    });
+    
     return stats;
-  }, [selectedDate, getDayStats]);
+  }, [viewMode, selectedDate, getDayStats, getDateRange]);
 
   if (loading) {
     return (
