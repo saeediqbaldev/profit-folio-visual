@@ -58,6 +58,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
             description: "Failed to load your trades from the database.",
           });
         } else {
+          console.log('Loaded trades from database:', data?.length || 0, 'trades');
           // Transform Supabase data to match frontend interface
           const transformedTrades = data.map(trade => ({
             id: trade.id,
