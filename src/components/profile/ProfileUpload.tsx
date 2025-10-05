@@ -44,13 +44,19 @@ const ProfileUpload = ({ avatarUrl, fullName, email, onUploadComplete }: Profile
         throw new Error('Invalid file extension. Allowed: png, jpg, jpeg, webp');
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = `${user.id}/${fileName}`;
 
       // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: true
+        });
 
       if (uploadError) {
         throw uploadError;

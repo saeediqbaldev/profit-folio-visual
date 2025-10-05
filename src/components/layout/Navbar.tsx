@@ -1,8 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, TrendingUp, LogOut, BarChart3, PenTool, User, Settings, Calendar } from "lucide-react";
+import { Moon, Sun, TrendingUp, LogOut, BarChart3, PenTool, User, Settings, Calendar, Eye, Edit } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavbarProps {
   currentPage: string;
@@ -13,6 +24,35 @@ interface NavbarProps {
 const Navbar = ({ currentPage, onNavigate, onLogout }: NavbarProps) => {
   const { theme, setTheme } = useTheme();
   const { isAdmin } = useUserRole();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<{
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
 
   const navigation = [
     { id: "journal", label: "Add Trades", icon: PenTool },
@@ -73,14 +113,41 @@ const Navbar = ({ currentPage, onNavigate, onLogout }: NavbarProps) => {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            <Button
-              variant="ghost"
-              onClick={onLogout}
-              className="flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
+
+            {/* User Profile Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 hover:bg-accent">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarFallback>
+                      {profile?.full_name?.charAt(0).toUpperCase() || 
+                       user?.email?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline text-sm font-medium">
+                    {profile?.full_name || user?.email || 'User'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onNavigate('profile')} className="cursor-pointer">
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Account
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onNavigate('profile')} className="cursor-pointer">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
