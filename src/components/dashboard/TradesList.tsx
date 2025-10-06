@@ -8,7 +8,18 @@ import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Minus, Upload, X } from "lucide-react";
+import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Minus, Upload, X, CheckSquare, Square } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +48,8 @@ interface TradesListProps {
 const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: TradesListProps) => {
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [editFormData, setEditFormData] = useState<Trade | null>(null);
+  const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { toast } = useToast();
 
   const handleEditClick = useCallback((trade: Trade) => {
@@ -121,6 +134,46 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
     }
   }, []);
 
+  const toggleTradeSelection = useCallback((tradeId: string) => {
+    setSelectedTrades(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tradeId)) {
+        newSet.delete(tradeId);
+      } else {
+        newSet.add(tradeId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const selectAllTrades = useCallback(() => {
+    setSelectedTrades(new Set(trades.map(t => t.id)));
+  }, [trades]);
+
+  const deselectAllTrades = useCallback(() => {
+    setSelectedTrades(new Set());
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedTrades.size === 0) return;
+    
+    const tradeIds = Array.from(selectedTrades);
+    for (const id of tradeIds) {
+      await onDeleteTrade(id);
+    }
+    
+    setSelectedTrades(new Set());
+    setShowDeleteConfirm(false);
+    
+    toast({
+      title: "Trades deleted",
+      description: `Successfully deleted ${tradeIds.length} trade(s).`,
+    });
+  }, [selectedTrades, onDeleteTrade, toast]);
+
+  const allSelected = trades.length > 0 && selectedTrades.size === trades.length;
+  const someSelected = selectedTrades.size > 0 && selectedTrades.size < trades.length;
+
   if (trades.length === 0) {
     return (
       <Card className="shadow-card border-border/50">
@@ -135,18 +188,71 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
   }
 
   return (
-    <Card className="shadow-card border-border/50">
-      <CardHeader>
-        <CardTitle>All Trades ({trades.length})</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {trades.map((trade) => (
-          <div
-            key={trade.id}
-            className="border border-border/50 rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+    <>
+      <Card className="shadow-card border-border/50">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>All Trades ({trades.length})</CardTitle>
+            {selectedTrades.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {selectedTrades.size} selected
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAllTrades}
+                >
+                  Deselect All
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete Selected
+                </Button>
+              </div>
+            )}
+          </div>
+          {trades.length > 0 && (
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={allSelected ? deselectAllTrades : selectAllTrades}
+              >
+                {allSelected ? (
+                  <>
+                    <CheckSquare className="h-4 w-4 mr-1" />
+                    Deselect All
+                  </>
+                ) : (
+                  <>
+                    <Square className="h-4 w-4 mr-1" />
+                    Select All
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {trades.map((trade) => (
+            <div
+              key={trade.id}
+              className={`border border-border/50 rounded-lg p-4 space-y-3 hover:shadow-md transition-all ${
+                selectedTrades.has(trade.id) ? 'bg-primary/5 border-primary/50' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={selectedTrades.has(trade.id)}
+                    onCheckedChange={() => toggleTradeSelection(trade.id)}
+                    aria-label={`Select trade ${trade.id}`}
+                  />
                 {getResultIcon(trade.result)}
                 <div>
                   <h3 className="font-medium">Entry: {trade.entry}</h3>
@@ -392,11 +498,32 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
               <div className="text-sm">
                 <span className="font-medium">Learning:</span> {trade.learning}
               </div>
-            )}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Trades?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedTrades.size} trade(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
