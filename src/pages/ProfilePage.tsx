@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileUpload from "@/components/profile/ProfileUpload";
+import CandleLoader from "@/components/ui/candle-loader";
 import ActivityLogs from "@/components/profile/ActivityLogs";
 import { exportToCSV } from "@/utils/exportData";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -229,10 +230,46 @@ const ProfilePage = () => {
         }
 
         const dataRows = rows.slice(headerIndex + 1);
+        
+        // Helper function to parse CSV row properly (handles quoted values with commas)
+        const parseCSVRow = (row: string): string[] => {
+          const values: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < row.length; i++) {
+            const char = row[i];
+            const nextChar = row[i + 1];
+            
+            if (char === '"') {
+              if (inQuotes && nextChar === '"') {
+                // Escaped quote
+                current += '"';
+                i++;
+              } else {
+                // Toggle quote state
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              // End of value
+              values.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          
+          // Add the last value
+          values.push(current.trim());
+          return values;
+        };
+
         const trades = dataRows.map(row => {
-          const values = row.split(',').map(v => v.replace(/^"|"$/g, '').trim());
-          const snoValue = parseInt(values[0]) || 0;
-          if (snoValue === 0) return null;
+          const values = parseCSVRow(row);
+          if (values.length < 8) return null;
+          
+          // Skip if entry is empty
+          if (!values[2] || !values[2].trim()) return null;
           
           return {
             user_id: user.id,
@@ -246,6 +283,10 @@ const ProfilePage = () => {
           };
         }).filter((trade): trade is NonNullable<typeof trade> => trade !== null);
 
+        if (trades.length === 0) {
+          throw new Error('No valid trade data found in file');
+        }
+
         const { error } = await supabase
           .from('trades')
           .insert(trades);
@@ -256,12 +297,15 @@ const ProfilePage = () => {
           title: "Import successful",
           description: `${trades.length} trade records have been imported.`,
         });
+        
+        // Reset the file input
+        event.target.value = '';
       } catch (error) {
         console.error('Import error:', error);
         toast({
           variant: "destructive",
           title: "Import failed",
-          description: "Failed to import trade records. Please check the file format.",
+          description: error instanceof Error ? error.message : "Failed to import trade records. Please check the file format.",
         });
       }
     };
@@ -358,8 +402,8 @@ const ProfilePage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <CandleLoader />
           <span className="text-muted-foreground">Loading profile...</span>
         </div>
       </div>

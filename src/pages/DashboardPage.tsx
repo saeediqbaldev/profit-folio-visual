@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
 import { exportToCSV, exportToPDF } from "@/utils/exportData";
+import CandleLoader from "@/components/ui/candle-loader";
 
 interface Trade {
   id: string;
@@ -174,8 +175,8 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <CandleLoader />
           <span className="text-muted-foreground">Loading your trades...</span>
         </div>
       </div>
