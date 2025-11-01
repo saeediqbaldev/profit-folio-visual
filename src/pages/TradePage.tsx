@@ -128,11 +128,14 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Use signed URL for private bucket (expires in 1 hour)
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('trade_screenshots')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 3600);
 
-      setTrade(prev => prev ? { ...prev, [field]: publicUrl } : null);
+      if (signedUrlError) throw signedUrlError;
+
+      setTrade(prev => prev ? { ...prev, [field]: signedUrlData.signedUrl } : null);
 
       toast({
         title: "Success",
