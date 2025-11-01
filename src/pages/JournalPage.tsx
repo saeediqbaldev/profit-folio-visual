@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Trade {
   id: string;
-  sno?: number;
+  strategy: string;
   entry: string;
   reason: string;
   tp: string;
@@ -23,7 +23,7 @@ const JournalPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt' | 'sno'>) => {
+  const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt'>) => {
     if (!user) return;
 
     try {
@@ -31,6 +31,7 @@ const JournalPage = () => {
         .from('trades')
         .insert({
           user_id: user.id,
+          strategy: tradeData.strategy,
           entry: tradeData.entry,
           reason: tradeData.reason,
           tp: tradeData.tp,

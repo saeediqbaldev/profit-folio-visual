@@ -166,179 +166,168 @@ const TradingOverviewPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
             Trading Overview
           </h1>
           <p className="text-muted-foreground mt-2">
-            Track your daily trading performance at a glance
+            Track your trading performance with calendar view
           </p>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === "daily" ? "default" : "outline"}
-            onClick={() => setViewMode("daily")}
-          >
-            Daily
-          </Button>
-          <Button
-            variant={viewMode === "weekly" ? "default" : "outline"}
-            onClick={() => setViewMode("weekly")}
-          >
-            Weekly
-          </Button>
-          <Button
-            variant={viewMode === "monthly" ? "default" : "outline"}
-            onClick={() => setViewMode("monthly")}
-          >
-            Monthly
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Trading Calendar</CardTitle>
-              <CardDescription>
-                {viewMode === "weekly" && "Monday to Friday view"}
-                {viewMode === "monthly" && "Monthly overview"}
-                {viewMode === "daily" && "Select a day to view details"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center p-6">
-              <style>{`
-                .calendar-wrapper .rdp {
-                  --rdp-cell-size: 60px;
-                  --rdp-accent-color: hsl(var(--primary));
-                  margin: 0;
-                }
-                .calendar-wrapper .rdp-months {
-                  width: 100%;
-                }
-                .calendar-wrapper .rdp-month {
-                  width: 100%;
-                }
-                .calendar-wrapper .rdp-table {
-                  width: 100%;
-                  max-width: none;
-                }
-                .calendar-wrapper .rdp-cell {
-                  width: 60px;
-                  height: 60px;
-                  padding: 2px;
-                }
-                .calendar-wrapper .rdp-day {
-                  width: 56px;
-                  height: 56px;
-                  font-size: 14px;
-                  border-radius: 8px;
-                  position: relative;
-                }
-                .calendar-wrapper .rdp-day_selected {
-                  background-color: hsl(var(--primary));
-                  color: hsl(var(--primary-foreground));
-                  font-weight: bold;
-                }
-              `}</style>
-              <div className="calendar-wrapper w-full">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  className="rounded-md border-0 w-full"
-                  modifiers={modifiers}
-                  modifiersClassNames={modifiersClassNames}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Stats Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {viewMode === "daily" && format(selectedDate, 'MMM dd, yyyy')}
-                {viewMode === "weekly" && `Week of ${format(getDateRange.start, 'MMM dd')}`}
-                {viewMode === "monthly" && format(selectedDate, 'MMMM yyyy')}
-              </CardTitle>
-              <CardDescription>Trading Statistics</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Total Trades</span>
-                  <span className="text-2xl font-bold">{currentStats.total}</span>
-                </div>
-                <div className="flex justify-between items-center text-green-600 dark:text-green-400">
-                  <span className="text-sm">Winning Trades</span>
-                  <span className="text-xl font-semibold">{currentStats.wins}</span>
-                </div>
-                <div className="flex justify-between items-center text-red-600 dark:text-red-400">
-                  <span className="text-sm">Losing Trades</span>
-                  <span className="text-xl font-semibold">{currentStats.losses}</span>
-                </div>
-                <div className="flex justify-between items-center text-gray-600 dark:text-gray-400">
-                  <span className="text-sm">Breakeven Trades</span>
-                  <span className="text-xl font-semibold">{currentStats.breakeven}</span>
-                </div>
-              </div>
-
-              {currentStats.total > 0 && (
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Win Rate</span>
-                    <span className="text-lg font-bold">
-                      {((currentStats.wins / currentStats.total) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Color Legend */}
         <Card>
-          <CardHeader>
-            <CardTitle>Color Legend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-green-500/80" />
-                <span className="text-sm">High Win Rate (80%+)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-green-400/70" />
-                <span className="text-sm">Good Win Rate (60-80%)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-green-300/60" />
-                <span className="text-sm">Moderate Win Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-red-300/60" />
-                <span className="text-sm">Moderate Loss Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-red-400/70" />
-                <span className="text-sm">High Loss Rate (60-80%)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-red-500/80" />
-                <span className="text-sm">Very High Loss Rate (80%+)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-gray-400/60" />
-                <span className="text-sm">Breakeven</span>
-              </div>
+          <CardContent className="p-6">
+            <style>{`
+              .calendar-box-view .rdp {
+                --rdp-cell-size: 80px;
+                margin: 0;
+                width: 100%;
+              }
+              .calendar-box-view .rdp-months {
+                width: 100%;
+              }
+              .calendar-box-view .rdp-month {
+                width: 100%;
+              }
+              .calendar-box-view .rdp-table {
+                width: 100%;
+                max-width: none;
+              }
+              .calendar-box-view .rdp-cell {
+                width: calc(100% / 7);
+                height: 100px;
+                padding: 4px;
+              }
+              .calendar-box-view .rdp-day {
+                width: 100%;
+                height: 100%;
+                font-size: 16px;
+                border-radius: 12px;
+                border: 2px solid hsl(var(--border));
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                transition: all 0.2s;
+              }
+              .calendar-box-view .rdp-day:hover {
+                border-color: hsl(var(--primary));
+                transform: scale(1.05);
+                z-index: 10;
+              }
+              .calendar-box-view .rdp-day_selected {
+                background-color: hsl(var(--primary));
+                color: hsl(var(--primary-foreground));
+                font-weight: bold;
+                border-color: hsl(var(--primary));
+              }
+              .calendar-box-view .rdp-day_outside {
+                opacity: 0.3;
+              }
+              .trade-stats {
+                font-size: 11px;
+                display: flex;
+                gap: 6px;
+                margin-top: 2px;
+              }
+              .win-badge {
+                background: hsl(142 76% 36%);
+                color: white;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-weight: 600;
+              }
+              .loss-badge {
+                background: hsl(0 84% 60%);
+                color: white;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-weight: 600;
+              }
+              @media (max-width: 768px) {
+                .calendar-box-view .rdp-cell {
+                  height: 70px;
+                }
+                .calendar-box-view .rdp-day {
+                  font-size: 14px;
+                }
+                .trade-stats {
+                  font-size: 9px;
+                  gap: 4px;
+                }
+              }
+            `}</style>
+            <div className="calendar-box-view">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                className="rounded-md border-0 w-full"
+                modifiers={modifiers}
+                modifiersClassNames={modifiersClassNames}
+                components={{
+                  DayContent: ({ date }) => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const stats = getDayStats.get(dateStr);
+                    return (
+                      <div className="flex flex-col items-center justify-center w-full h-full">
+                        <div className="text-lg font-semibold">{format(date, 'd')}</div>
+                        {stats && stats.total > 0 && (
+                          <div className="trade-stats">
+                            {stats.wins > 0 && <span className="win-badge">{stats.wins}W</span>}
+                            {stats.losses > 0 && <span className="loss-badge">{stats.losses}L</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                }}
+              />
             </div>
           </CardContent>
         </Card>
+
+        {/* Selected Day Stats */}
+        {(() => {
+          const dateStr = format(selectedDate, 'yyyy-MM-dd');
+          const dayStats = getDayStats.get(dateStr);
+          
+          if (dayStats && dayStats.total > 0) {
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{format(selectedDate, 'MMMM dd, yyyy')}</CardTitle>
+                  <CardDescription>Daily Trading Statistics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <div className="text-sm text-muted-foreground">Total Trades</div>
+                      <div className="text-2xl font-bold">{dayStats.total}</div>
+                    </div>
+                    <div className="bg-green-500/10 p-4 rounded-lg">
+                      <div className="text-sm text-green-600 dark:text-green-400">Wins</div>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{dayStats.wins}</div>
+                    </div>
+                    <div className="bg-red-500/10 p-4 rounded-lg">
+                      <div className="text-sm text-red-600 dark:text-red-400">Losses</div>
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{dayStats.losses}</div>
+                    </div>
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <div className="text-sm text-muted-foreground">Win Rate</div>
+                      <div className="text-2xl font-bold">
+                        {((dayStats.wins / dayStats.total) * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+          return null;
+        })()}
       </div>
     </div>
   );
