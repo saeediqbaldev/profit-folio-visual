@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileUpload from "@/components/profile/ProfileUpload";
 import CandleLoader from "@/components/ui/candle-loader";
-import ActivityLogs from "@/components/profile/ActivityLogs";
+
 import { exportToCSV } from "@/utils/exportData";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -627,8 +627,6 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        {/* Activity Logs */}
-        <ActivityLogs />
       </div>
     </div>
   );

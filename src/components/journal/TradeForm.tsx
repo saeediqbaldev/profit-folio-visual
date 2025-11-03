@@ -32,6 +32,10 @@ const tradeSchema = z.object({
     .min(1, "Stop loss is required")
     .max(50, "Stop loss must be less than 50 characters")
     .regex(/^[\d.]+$/, "Stop loss must be a valid number"),
+  rr: z.string()
+    .trim()
+    .min(1, "Risk/Reward ratio is required")
+    .max(20, "Risk/Reward ratio must be less than 20 characters"),
   result: z.enum(["WIN", "LOSS", "BE"], {
     required_error: "Please select a trade result"
   }),
@@ -51,6 +55,7 @@ interface Trade {
   reason: string;
   tp: string;
   sl: string;
+  rr: string;
   result: string;
   learning: string;
   screenshot: string | null;
@@ -71,6 +76,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     reason: "",
     tp: "",
     sl: "",
+    rr: "",
     result: "",
     learning: "",
     screenshot: null as string | null,
@@ -183,6 +189,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       reason: "",
       tp: "",
       sl: "",
+      rr: "",
       result: "",
       learning: "",
       screenshot: null,
@@ -277,6 +284,19 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="rr">Risk Reward R/R *</Label>
+                <Input
+                  id="rr"
+                  type="text"
+                  placeholder="e.g., 1:3"
+                  value={formData.rr}
+                  onChange={(e) => handleInputChange('rr', e.target.value)}
+                  className="h-11"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="tp">Take Profits *</Label>
                 <LineNumbersTextarea
                   value={formData.tp}
@@ -334,101 +354,104 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
             </div>
           </div>
 
-          {/* Setup Screenshot Upload */}
-          <div className="space-y-2">
-            <Label htmlFor="screenshot">Setup Screenshot</Label>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('screenshot')?.click()}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Image
-                </Button>
-                <span className="text-sm text-muted-foreground">PNG, JPG only</span>
-              </div>
-              <input
-                id="screenshot"
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              
-              {formData.screenshot && (
-                <div className="relative inline-block">
-                  <img
-                    src={formData.screenshot}
-                    alt="Setup screenshot"
-                    className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      const event = new CustomEvent('openLightbox', { detail: formData.screenshot });
-                      window.dispatchEvent(event);
-                    }}
-                  />
+          {/* Screenshot Uploads - Side by Side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Setup Screenshot Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="screenshot">Setup Screenshot</Label>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
                   <Button
                     type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
-                    onClick={removeScreenshot}
+                    variant="outline"
+                    onClick={() => document.getElementById('screenshot')?.click()}
+                    className="flex items-center gap-2"
                   >
-                    <X className="h-3 w-3" />
+                    <Upload className="h-4 w-4" />
+                    Upload Image
                   </Button>
+                  <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                 </div>
-              )}
+                <input
+                  id="screenshot"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                
+                {formData.screenshot && (
+                  <div className="relative inline-block">
+                    <img
+                      src={formData.screenshot}
+                      alt="Setup screenshot"
+                      className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        const event = new CustomEvent('openLightbox', { detail: formData.screenshot });
+                        window.dispatchEvent(event);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                      onClick={removeScreenshot}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* After Trade Screenshot Upload */}
-          <div className="space-y-2">
-            <Label htmlFor="afterTradeScreenshot">After Trade Screenshot</Label>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('afterTradeScreenshot')?.click()}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Image
-                </Button>
-                <span className="text-sm text-muted-foreground">PNG, JPG only</span>
-              </div>
-              <input
-                id="afterTradeScreenshot"
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                onChange={handleAfterTradeFileUpload}
-                className="hidden"
-              />
-              
-              {formData.afterTradeScreenshot && (
-                <div className="relative inline-block">
-                  <img
-                    src={formData.afterTradeScreenshot}
-                    alt="After trade screenshot"
-                    className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      const event = new CustomEvent('openLightbox', { detail: formData.afterTradeScreenshot });
-                      window.dispatchEvent(event);
-                    }}
-                  />
+            {/* After Trade Screenshot Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="afterTradeScreenshot">After Trade Screenshot</Label>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
                   <Button
                     type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
-                    onClick={removeAfterTradeScreenshot}
+                    variant="outline"
+                    onClick={() => document.getElementById('afterTradeScreenshot')?.click()}
+                    className="flex items-center gap-2"
                   >
-                    <X className="h-3 w-3" />
+                    <Upload className="h-4 w-4" />
+                    Upload Image
                   </Button>
+                  <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                 </div>
-              )}
+                <input
+                  id="afterTradeScreenshot"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleAfterTradeFileUpload}
+                  className="hidden"
+                />
+                
+                {formData.afterTradeScreenshot && (
+                  <div className="relative inline-block">
+                    <img
+                      src={formData.afterTradeScreenshot}
+                      alt="After trade screenshot"
+                      className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        const event = new CustomEvent('openLightbox', { detail: formData.afterTradeScreenshot });
+                        window.dispatchEvent(event);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                      onClick={removeAfterTradeScreenshot}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

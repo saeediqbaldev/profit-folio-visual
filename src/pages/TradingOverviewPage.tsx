@@ -166,21 +166,21 @@ const TradingOverviewPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            Trading Overview
+      <div className="w-full p-4 md:p-6 space-y-6">
+        <div className="text-center">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+            TradeZilla Calendar
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Track your trading performance with calendar view
+          <p className="text-muted-foreground mt-2 text-lg">
+            Track your trading performance with visual calendar view
           </p>
         </div>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="shadow-2xl border-2 border-border/50">
+          <CardContent className="p-4 md:p-8">
             <style>{`
               .calendar-box-view .rdp {
-                --rdp-cell-size: 80px;
+                --rdp-cell-size: 120px;
                 margin: 0;
                 width: 100%;
               }
@@ -190,72 +190,109 @@ const TradingOverviewPage = () => {
               .calendar-box-view .rdp-month {
                 width: 100%;
               }
+              .calendar-box-view .rdp-caption {
+                font-size: 1.5rem;
+                font-weight: bold;
+                margin-bottom: 1.5rem;
+              }
               .calendar-box-view .rdp-table {
                 width: 100%;
                 max-width: none;
               }
+              .calendar-box-view .rdp-head_cell {
+                font-size: 1rem;
+                font-weight: 600;
+                padding: 1rem 0.5rem;
+              }
               .calendar-box-view .rdp-cell {
                 width: calc(100% / 7);
-                height: 100px;
-                padding: 4px;
+                height: 140px;
+                padding: 6px;
               }
               .calendar-box-view .rdp-day {
                 width: 100%;
                 height: 100%;
-                font-size: 16px;
-                border-radius: 12px;
-                border: 2px solid hsl(var(--border));
+                font-size: 20px;
+                font-weight: 600;
+                border-radius: 16px;
+                border: 3px solid hsl(var(--border));
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                gap: 4px;
-                transition: all 0.2s;
+                gap: 6px;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
               }
               .calendar-box-view .rdp-day:hover {
                 border-color: hsl(var(--primary));
-                transform: scale(1.05);
+                transform: translateY(-4px) scale(1.05);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.15);
                 z-index: 10;
               }
               .calendar-box-view .rdp-day_selected {
-                background-color: hsl(var(--primary));
+                background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
                 color: hsl(var(--primary-foreground));
                 font-weight: bold;
                 border-color: hsl(var(--primary));
+                box-shadow: 0 4px 16px hsl(var(--primary) / 0.4);
               }
               .calendar-box-view .rdp-day_outside {
-                opacity: 0.3;
+                opacity: 0.2;
               }
               .trade-stats {
-                font-size: 11px;
+                font-size: 13px;
                 display: flex;
-                gap: 6px;
-                margin-top: 2px;
+                gap: 8px;
+                margin-top: 4px;
               }
               .win-badge {
                 background: hsl(142 76% 36%);
                 color: white;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-weight: 600;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 700;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
               }
               .loss-badge {
                 background: hsl(0 84% 60%);
                 color: white;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-weight: 600;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 700;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+              }
+              @media (max-width: 1024px) {
+                .calendar-box-view .rdp-cell {
+                  height: 100px;
+                }
+                .calendar-box-view .rdp-day {
+                  font-size: 16px;
+                }
+                .trade-stats {
+                  font-size: 11px;
+                  gap: 6px;
+                }
+                .win-badge, .loss-badge {
+                  padding: 3px 8px;
+                }
               }
               @media (max-width: 768px) {
                 .calendar-box-view .rdp-cell {
-                  height: 70px;
+                  height: 80px;
                 }
                 .calendar-box-view .rdp-day {
                   font-size: 14px;
                 }
+                .calendar-box-view .rdp-caption {
+                  font-size: 1.2rem;
+                }
                 .trade-stats {
                   font-size: 9px;
                   gap: 4px;
+                }
+                .win-badge, .loss-badge {
+                  padding: 2px 6px;
                 }
               }
             `}</style>
