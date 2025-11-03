@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
-import StatsCards from "@/components/dashboard/StatsCards";
-import TradeChart from "@/components/dashboard/TradeChart";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import TradesList from "@/components/dashboard/TradesList";
-import AdvancedCharts from "@/components/dashboard/AdvancedCharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText } from "lucide-react";
 import { exportToCSV, exportToPDF } from "@/utils/exportData";
 import CandleLoader from "@/components/ui/candle-loader";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { format, parseISO } from "date-fns";
 
 interface Trade {
   id: string;
@@ -183,16 +183,39 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
     );
   }
 
+  const chartData = useMemo(() => {
+    const dailyStats: { [key: string]: { total: number; wins: number; losses: number; breakeven: number } } = {};
+    
+    trades.forEach(trade => {
+      const date = format(parseISO(trade.createdAt), 'MMM dd');
+      if (!dailyStats[date]) {
+        dailyStats[date] = { total: 0, wins: 0, losses: 0, breakeven: 0 };
+      }
+      dailyStats[date].total++;
+      
+      if (trade.result === 'WIN') dailyStats[date].wins++;
+      else if (trade.result === 'LOSS') dailyStats[date].losses++;
+      else if (trade.result === 'BE') dailyStats[date].breakeven++;
+    });
+    
+    return Object.entries(dailyStats)
+      .map(([date, stats]) => ({
+        date,
+        ...stats
+      }))
+      .slice(-30);
+  }, [trades]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Dashboard
+              Trading History
             </h1>
             <p className="text-muted-foreground mt-2">
-              Analyze your trading performance and statistics
+              View and analyze all your trading records
             </p>
           </div>
           <div className="flex gap-2">
@@ -217,9 +240,33 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
           </div>
         </div>
 
-        <StatsCards trades={trades} />
-        <AdvancedCharts trades={trades} />
-        <TradeChart trades={trades} />
+        <Card className="shadow-card border-border/50">
+          <CardHeader>
+            <CardTitle>Trading Performance Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} name="Total Trades" />
+                <Line type="monotone" dataKey="wins" stroke="hsl(var(--success))" strokeWidth={2} name="Wins" />
+                <Line type="monotone" dataKey="losses" stroke="hsl(var(--danger))" strokeWidth={2} name="Losses" />
+                <Line type="monotone" dataKey="breakeven" stroke="hsl(var(--muted-foreground))" strokeWidth={2} name="Breakeven" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
         <TradesList 
           trades={trades} 
           onUpdateTrade={handleUpdateTrade}

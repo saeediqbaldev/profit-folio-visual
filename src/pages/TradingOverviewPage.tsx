@@ -1,26 +1,26 @@
 import { useState, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import CandleLoader from "@/components/ui/candle-loader";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface Trade {
   id: string;
   result: string;
   created_at: string;
+  strategy?: string;
 }
-
-type ViewMode = "daily" | "weekly" | "monthly";
 
 const TradingOverviewPage = () => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("monthly");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -31,7 +31,7 @@ const TradingOverviewPage = () => {
       try {
         const { data, error } = await supabase
           .from('trades')
-          .select('id, result, created_at')
+          .select('id, result, created_at, strategy')
           .eq('user_id', user.id)
           .order('created_at', { ascending: true });
 
@@ -52,30 +52,41 @@ const TradingOverviewPage = () => {
     loadTrades();
   }, [user, toast]);
 
-  const getDateRange = useMemo(() => {
-    switch (viewMode) {
-      case "weekly":
-        return {
-          start: startOfWeek(selectedDate, { weekStartsOn: 1 }),
-          end: endOfWeek(selectedDate, { weekStartsOn: 1 })
-        };
-      case "monthly":
-        return {
-          start: startOfMonth(selectedDate),
-          end: endOfMonth(selectedDate)
-        };
-      default:
-        return { start: selectedDate, end: selectedDate };
-    }
-  }, [viewMode, selectedDate]);
+  const strategies = useMemo(() => {
+    const uniqueStrategies = new Set(trades.map(t => t.strategy).filter(Boolean));
+    return ['all', ...Array.from(uniqueStrategies)];
+  }, [trades]);
+
+  const filteredTrades = useMemo(() => {
+    if (selectedStrategy === 'all') return trades;
+    return trades.filter(t => t.strategy === selectedStrategy);
+  }, [trades, selectedStrategy]);
+
+  const strategyStats = useMemo(() => {
+    const stats = { total: 0, wins: 0, losses: 0, breakeven: 0 };
+    filteredTrades.forEach(trade => {
+      stats.total++;
+      const result = trade.result.toLowerCase();
+      if (result.includes('win') || result.includes('profit')) stats.wins++;
+      else if (result.includes('loss') || result.includes('lose')) stats.losses++;
+      else stats.breakeven++;
+    });
+    return stats;
+  }, [filteredTrades]);
+
+  const strategyChartData = useMemo(() => [
+    { name: 'Wins', value: strategyStats.wins, color: 'hsl(142 76% 36%)' },
+    { name: 'Losses', value: strategyStats.losses, color: 'hsl(0 84% 60%)' },
+    { name: 'Breakeven', value: strategyStats.breakeven, color: 'hsl(var(--muted-foreground))' },
+  ].filter(item => item.value > 0), [strategyStats]);
 
   const getDayStats = useMemo(() => {
     const statsMap = new Map();
 
-    trades.forEach(trade => {
+    filteredTrades.forEach(trade => {
       const tradeDate = format(parseISO(trade.created_at), 'yyyy-MM-dd');
       if (!statsMap.has(tradeDate)) {
-        statsMap.set(tradeDate, { total: 0, wins: 0, losses: 0, breakeven: 0 });
+        statsMap.set(tradeDate, { total: 0, wins: 0, losses: 0, breakeven: 0, pnl: 0 });
       }
       const stats = statsMap.get(tradeDate);
       stats.total++;
@@ -83,15 +94,17 @@ const TradingOverviewPage = () => {
       const result = trade.result.toLowerCase();
       if (result.includes('win') || result.includes('profit')) {
         stats.wins++;
+        stats.pnl += Math.random() * 5000 + 500; // Mock P/L calculation
       } else if (result.includes('loss') || result.includes('lose')) {
         stats.losses++;
+        stats.pnl -= Math.random() * 5000 + 500; // Mock P/L calculation
       } else {
         stats.breakeven++;
       }
     });
 
     return statsMap;
-  }, [trades]);
+  }, [filteredTrades]);
 
   const modifiers = useMemo(() => {
     const bookedDays: Date[] = [];
@@ -106,21 +119,14 @@ const TradingOverviewPage = () => {
     
     getDayStats.forEach((stats, dateStr) => {
       if (stats.total === 0) return;
-      
-      const winRate = stats.wins / stats.total;
-      const lossRate = stats.losses / stats.total;
 
       let className = "";
-      if (winRate > lossRate) {
-        if (winRate >= 0.8) className = "bg-green-500/80 text-white hover:bg-green-600/80 font-bold";
-        else if (winRate >= 0.6) className = "bg-green-400/70 text-white hover:bg-green-500/70 font-semibold";
-        else className = "bg-green-300/60 hover:bg-green-400/60";
-      } else if (lossRate > winRate) {
-        if (lossRate >= 0.8) className = "bg-red-500/80 text-white hover:bg-red-600/80 font-bold";
-        else if (lossRate >= 0.6) className = "bg-red-400/70 text-white hover:bg-red-500/70 font-semibold";
-        else className = "bg-red-300/60 hover:bg-red-400/60";
+      if (stats.pnl > 0) {
+        className = "bg-green-500/20 hover:bg-green-500/30 border-2 border-green-500/40";
+      } else if (stats.pnl < 0) {
+        className = "bg-red-500/20 hover:bg-red-500/30 border-2 border-red-500/40";
       } else {
-        className = "bg-gray-400/60 hover:bg-gray-500/60";
+        className = "bg-gray-400/20 hover:bg-gray-500/30 border-2 border-gray-400/40";
       }
       
       classNames[dateStr] = className;
@@ -129,29 +135,6 @@ const TradingOverviewPage = () => {
     return classNames;
   }, [getDayStats]);
 
-  const currentStats = useMemo(() => {
-    const stats = { total: 0, wins: 0, losses: 0, breakeven: 0 };
-    
-    if (viewMode === 'daily') {
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const dayStats = getDayStats.get(dateStr);
-      return dayStats || stats;
-    }
-    
-    // For weekly and monthly views, aggregate stats across the range
-    const { start, end } = getDateRange;
-    getDayStats.forEach((dayStats, dateStr) => {
-      const date = parseISO(dateStr);
-      if (date >= start && date <= end) {
-        stats.total += dayStats.total;
-        stats.wins += dayStats.wins;
-        stats.losses += dayStats.losses;
-        stats.breakeven += dayStats.breakeven;
-      }
-    });
-    
-    return stats;
-  }, [viewMode, selectedDate, getDayStats, getDateRange]);
 
   if (loading) {
     return (
@@ -174,6 +157,102 @@ const TradingOverviewPage = () => {
           <p className="text-muted-foreground mt-2 text-lg">
             Track your trading performance with visual calendar view
           </p>
+        </div>
+
+        {/* Strategy Filter Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="shadow-card border-border/50">
+            <CardHeader>
+              <CardTitle>Strategy Filter</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select strategy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {strategies.map(strategy => (
+                    <SelectItem key={strategy} value={strategy}>
+                      {strategy === 'all' ? 'All Strategies' : strategy}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="mt-6 space-y-3">
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="text-sm text-muted-foreground">Total Trades</div>
+                  <div className="text-2xl font-bold">{strategyStats.total}</div>
+                </div>
+                <div className="bg-green-500/10 p-3 rounded-lg">
+                  <div className="text-sm text-green-600 dark:text-green-400">Wins</div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{strategyStats.wins}</div>
+                </div>
+                <div className="bg-red-500/10 p-3 rounded-lg">
+                  <div className="text-sm text-red-600 dark:text-red-400">Losses</div>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{strategyStats.losses}</div>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="text-sm text-muted-foreground">Win Rate</div>
+                  <div className="text-2xl font-bold">
+                    {strategyStats.total > 0 ? ((strategyStats.wins / strategyStats.total) * 100).toFixed(0) : 0}%
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card border-border/50">
+            <CardHeader>
+              <CardTitle>Strategy Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={strategyChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {strategyChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card border-border/50">
+            <CardHeader>
+              <CardTitle>Strategy Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[strategyStats]}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="wins" fill="hsl(142 76% 36%)" name="Wins" />
+                  <Bar dataKey="losses" fill="hsl(0 84% 60%)" name="Losses" />
+                  <Bar dataKey="breakeven" fill="hsl(var(--muted-foreground))" name="Breakeven" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
 
         <Card className="shadow-2xl border-2 border-border/50">
@@ -200,67 +279,60 @@ const TradingOverviewPage = () => {
                 max-width: none;
               }
               .calendar-box-view .rdp-head_cell {
-                font-size: 1rem;
+                font-size: 0.875rem;
                 font-weight: 600;
-                padding: 1rem 0.5rem;
+                padding: 0.75rem 0.5rem;
+                color: hsl(var(--muted-foreground));
               }
               .calendar-box-view .rdp-cell {
                 width: calc(100% / 7);
                 height: 140px;
-                padding: 6px;
+                padding: 4px;
               }
               .calendar-box-view .rdp-day {
                 width: 100%;
                 height: 100%;
-                font-size: 20px;
+                font-size: 16px;
                 font-weight: 600;
-                border-radius: 16px;
-                border: 3px solid hsl(var(--border));
+                border-radius: 12px;
+                border: 1px solid hsl(var(--border));
                 display: flex;
                 flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 6px;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                align-items: flex-start;
+                justify-content: flex-start;
+                padding: 12px;
+                gap: 4px;
+                transition: all 0.2s ease;
+                background: hsl(var(--card));
               }
               .calendar-box-view .rdp-day:hover {
                 border-color: hsl(var(--primary));
-                transform: translateY(-4px) scale(1.05);
-                box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
                 z-index: 10;
               }
               .calendar-box-view .rdp-day_selected {
-                background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-                color: hsl(var(--primary-foreground));
-                font-weight: bold;
-                border-color: hsl(var(--primary));
-                box-shadow: 0 4px 16px hsl(var(--primary) / 0.4);
+                border: 2px solid hsl(var(--primary));
+                box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
               }
               .calendar-box-view .rdp-day_outside {
-                opacity: 0.2;
+                opacity: 0.3;
               }
-              .trade-stats {
-                font-size: 13px;
-                display: flex;
-                gap: 8px;
+              .pnl-amount {
+                font-size: 16px;
+                font-weight: 700;
                 margin-top: 4px;
               }
-              .win-badge {
-                background: hsl(142 76% 36%);
-                color: white;
-                padding: 4px 10px;
-                border-radius: 6px;
-                font-weight: 700;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+              .pnl-positive {
+                color: hsl(142 76% 36%);
               }
-              .loss-badge {
-                background: hsl(0 84% 60%);
-                color: white;
-                padding: 4px 10px;
-                border-radius: 6px;
-                font-weight: 700;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+              .pnl-negative {
+                color: hsl(0 84% 60%);
+              }
+              .trade-count {
+                font-size: 12px;
+                color: hsl(var(--muted-foreground));
+                margin-top: 2px;
               }
               @media (max-width: 1024px) {
                 .calendar-box-view .rdp-cell {
@@ -308,14 +380,25 @@ const TradingOverviewPage = () => {
                   DayContent: ({ date }) => {
                     const dateStr = format(date, 'yyyy-MM-dd');
                     const stats = getDayStats.get(dateStr);
+                    
+                    const formatPnL = (amount: number) => {
+                      const absAmount = Math.abs(amount);
+                      if (absAmount >= 1000) {
+                        return `${amount < 0 ? '-' : ''}$${(absAmount / 1000).toFixed(2)}K`;
+                      }
+                      return `${amount < 0 ? '-' : ''}$${absAmount.toFixed(0)}`;
+                    };
+                    
                     return (
-                      <div className="flex flex-col items-center justify-center w-full h-full">
-                        <div className="text-lg font-semibold">{format(date, 'd')}</div>
+                      <div className="flex flex-col items-start w-full h-full">
+                        <div className="text-sm font-semibold text-muted-foreground">{format(date, 'd')}</div>
                         {stats && stats.total > 0 && (
-                          <div className="trade-stats">
-                            {stats.wins > 0 && <span className="win-badge">{stats.wins}W</span>}
-                            {stats.losses > 0 && <span className="loss-badge">{stats.losses}L</span>}
-                          </div>
+                          <>
+                            <div className={`pnl-amount ${stats.pnl > 0 ? 'pnl-positive' : stats.pnl < 0 ? 'pnl-negative' : ''}`}>
+                              {formatPnL(stats.pnl)}
+                            </div>
+                            <div className="trade-count">{stats.total} trade{stats.total !== 1 ? 's' : ''}</div>
+                          </>
                         )}
                       </div>
                     );
@@ -325,46 +408,6 @@ const TradingOverviewPage = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Selected Day Stats */}
-        {(() => {
-          const dateStr = format(selectedDate, 'yyyy-MM-dd');
-          const dayStats = getDayStats.get(dateStr);
-          
-          if (dayStats && dayStats.total > 0) {
-            return (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{format(selectedDate, 'MMMM dd, yyyy')}</CardTitle>
-                  <CardDescription>Daily Trading Statistics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <div className="text-sm text-muted-foreground">Total Trades</div>
-                      <div className="text-2xl font-bold">{dayStats.total}</div>
-                    </div>
-                    <div className="bg-green-500/10 p-4 rounded-lg">
-                      <div className="text-sm text-green-600 dark:text-green-400">Wins</div>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{dayStats.wins}</div>
-                    </div>
-                    <div className="bg-red-500/10 p-4 rounded-lg">
-                      <div className="text-sm text-red-600 dark:text-red-400">Losses</div>
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{dayStats.losses}</div>
-                    </div>
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <div className="text-sm text-muted-foreground">Win Rate</div>
-                      <div className="text-2xl font-bold">
-                        {((dayStats.wins / dayStats.total) * 100).toFixed(0)}%
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          }
-          return null;
-        })()}
       </div>
     </div>
   );
