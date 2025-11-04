@@ -23,6 +23,7 @@ interface Trade {
   screenshot: string | null;
   afterTradeScreenshot: string | null;
   assetPair: string;
+  rr: string;
   createdAt: string;
 }
 
@@ -73,6 +74,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
             screenshot: trade.screenshot_url,
             afterTradeScreenshot: trade.after_trade_screenshot_url,
             assetPair: trade.asset_pair || '',
+            rr: trade.rr || '',
             createdAt: trade.created_at,
           }));
           setTrades(transformedTrades);
@@ -106,6 +108,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
           result: updatedTrade.result,
           learning: updatedTrade.learning,
           asset_pair: updatedTrade.assetPair,
+          rr: updatedTrade.rr,
           screenshot_url: updatedTrade.screenshot,
           after_trade_screenshot_url: updatedTrade.afterTradeScreenshot,
         })

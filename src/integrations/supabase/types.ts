@@ -87,6 +87,7 @@ export type Database = {
           learning: string | null
           reason: string | null
           result: string | null
+          rr: string | null
           screenshot_url: string | null
           sl: string | null
           sno: number
@@ -104,6 +105,7 @@ export type Database = {
           learning?: string | null
           reason?: string | null
           result?: string | null
+          rr?: string | null
           screenshot_url?: string | null
           sl?: string | null
           sno?: never
@@ -121,6 +123,7 @@ export type Database = {
           learning?: string | null
           reason?: string | null
           result?: string | null
+          rr?: string | null
           screenshot_url?: string | null
           sl?: string | null
           sno?: never

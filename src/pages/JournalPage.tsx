@@ -16,6 +16,7 @@ interface Trade {
   screenshot: string | null;
   afterTradeScreenshot: string | null;
   assetPair: string;
+  rr: string;
   createdAt: string;
 }
 
@@ -39,6 +40,7 @@ const JournalPage = () => {
           result: tradeData.result,
           learning: tradeData.learning,
           asset_pair: tradeData.assetPair,
+          rr: tradeData.rr,
           screenshot_url: tradeData.screenshot,
           after_trade_screenshot_url: tradeData.afterTradeScreenshot,
         })

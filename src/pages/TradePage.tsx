@@ -27,6 +27,7 @@ interface Trade {
   screenshot: string | null;
   afterTradeScreenshot: string | null;
   assetPair: string;
+  rr: string;
   createdAt: string;
 }
 
@@ -79,6 +80,7 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
           screenshot: data.screenshot_url,
           afterTradeScreenshot: data.after_trade_screenshot_url,
           assetPair: data.asset_pair || '',
+          rr: data.rr || '',
           createdAt: data.created_at,
         });
       }
@@ -170,6 +172,7 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
           result: trade.result,
           learning: trade.learning,
           asset_pair: trade.assetPair,
+          rr: trade.rr,
           screenshot_url: trade.screenshot,
           after_trade_screenshot_url: trade.afterTradeScreenshot,
         })
@@ -278,6 +281,16 @@ const TradePage = ({ tradeId, onBack }: TradePageProps) => {
                 value={trade.sl}
                 onChange={(e) => setTrade({ ...trade, sl: e.target.value })}
                 placeholder="SL price"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rr">Risk Reward R/R</Label>
+              <Input
+                id="rr"
+                value={trade.rr}
+                onChange={(e) => setTrade({ ...trade, rr: e.target.value })}
+                placeholder="e.g., 1:3"
               />
             </div>
           </div>
