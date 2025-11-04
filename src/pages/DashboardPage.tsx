@@ -175,17 +175,6 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
     }
   }, [user, toast]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <CandleLoader />
-          <span className="text-muted-foreground">Loading your trades...</span>
-        </div>
-      </div>
-    );
-  }
-
   const chartData = useMemo(() => {
     const dailyStats: { [key: string]: { total: number; wins: number; losses: number; breakeven: number } } = {};
     
@@ -208,6 +197,17 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
       }))
       .slice(-30);
   }, [trades]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <CandleLoader />
+          <span className="text-muted-foreground">Loading your trades...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
