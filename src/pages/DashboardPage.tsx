@@ -5,8 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, FileText } from "lucide-react";
-import { exportToCSV, exportToPDF } from "@/utils/exportData";
 import CandleLoader from "@/components/ui/candle-loader";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from "date-fns";
@@ -220,26 +218,6 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
             <p className="text-muted-foreground mt-2">
               View and analyze all your trading records
             </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => exportToCSV(trades)}
-              disabled={trades.length === 0}
-              className="flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => exportToPDF(trades)}
-              disabled={trades.length === 0}
-              className="flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export PDF
-            </Button>
           </div>
         </div>
 

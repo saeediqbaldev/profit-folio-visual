@@ -3,14 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Mail, Save, Download, Upload, Phone, Lock, Trash2 } from "lucide-react";
+import { User, Mail, Save, Phone, Lock, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileUpload from "@/components/profile/ProfileUpload";
 import CandleLoader from "@/components/ui/candle-loader";
 
-import { exportToCSV } from "@/utils/exportData";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Profile {
@@ -169,148 +168,6 @@ const ProfilePage = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleExportRecords = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('trades')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      const formattedTrades = data.map((trade, index) => ({
-        id: trade.id,
-        sno: trade.sno || index + 1,
-        entry: trade.entry,
-        reason: trade.reason || '',
-        tp: trade.tp || '',
-        sl: trade.sl || '',
-        result: trade.result || '',
-        learning: trade.learning || '',
-        assetPair: trade.asset_pair || '',
-        createdAt: trade.created_at,
-      }));
-
-      exportToCSV(formattedTrades);
-      
-      toast({
-        title: "Export successful",
-        description: "Your trade records have been exported.",
-      });
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({
-        variant: "destructive",
-        title: "Export failed",
-        description: "Failed to export trade records.",
-      });
-    }
-  };
-
-  const handleImportRecords = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user || !event.target.files || event.target.files.length === 0) return;
-
-    const file = event.target.files[0];
-    const reader = new FileReader();
-
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result as string;
-        const rows = text.split('\n').filter(row => row.trim());
-        
-        // Find the header row
-        const headerIndex = rows.findIndex(row => row.includes('S.No') || row.includes('Asset Pair'));
-        if (headerIndex === -1) {
-          throw new Error('Invalid CSV format');
-        }
-
-        const dataRows = rows.slice(headerIndex + 1);
-        
-        // Helper function to parse CSV row properly (handles quoted values with commas)
-        const parseCSVRow = (row: string): string[] => {
-          const values: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          
-          for (let i = 0; i < row.length; i++) {
-            const char = row[i];
-            const nextChar = row[i + 1];
-            
-            if (char === '"') {
-              if (inQuotes && nextChar === '"') {
-                // Escaped quote
-                current += '"';
-                i++;
-              } else {
-                // Toggle quote state
-                inQuotes = !inQuotes;
-              }
-            } else if (char === ',' && !inQuotes) {
-              // End of value
-              values.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          
-          // Add the last value
-          values.push(current.trim());
-          return values;
-        };
-
-        const trades = dataRows.map(row => {
-          const values = parseCSVRow(row);
-          if (values.length < 8) return null;
-          
-          // Skip if entry is empty
-          if (!values[2] || !values[2].trim()) return null;
-          
-          return {
-            user_id: user.id,
-            asset_pair: values[1] || '',
-            entry: values[2] || '',
-            tp: values[3] || '',
-            sl: values[4] || '',
-            result: values[5] || '',
-            reason: values[6] || '',
-            learning: values[7] || '',
-          };
-        }).filter((trade): trade is NonNullable<typeof trade> => trade !== null);
-
-        if (trades.length === 0) {
-          throw new Error('No valid trade data found in file');
-        }
-
-        const { error } = await supabase
-          .from('trades')
-          .insert(trades);
-
-        if (error) throw error;
-
-        toast({
-          title: "Import successful",
-          description: `${trades.length} trade records have been imported.`,
-        });
-        
-        // Reset the file input
-        event.target.value = '';
-      } catch (error) {
-        console.error('Import error:', error);
-        toast({
-          variant: "destructive",
-          title: "Import failed",
-          description: error instanceof Error ? error.message : "Failed to import trade records. Please check the file format.",
-        });
-      }
-    };
-
-    reader.readAsText(file);
   };
 
   const handleChangePassword = async () => {
@@ -504,43 +361,6 @@ const ProfilePage = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* Data Management */}
-        <Card className="shadow-card border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
-              Data Management
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={handleExportRecords} variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Trade Records
-              </Button>
-              
-              <label htmlFor="import-file">
-                <Button variant="outline" asChild>
-                  <span className="cursor-pointer">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import Trade Records
-                  </span>
-                </Button>
-              </label>
-              <input
-                id="import-file"
-                type="file"
-                accept=".csv"
-                onChange={handleImportRecords}
-                className="hidden"
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Export your trade records to CSV or import previous records from a CSV file.
-            </p>
-          </CardContent>
-        </Card>
 
         {/* Security Settings */}
         <Card className="shadow-card border-border/50">
