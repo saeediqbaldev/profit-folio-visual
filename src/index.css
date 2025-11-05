@@ -35,7 +35,7 @@
     --accent-foreground: 240 10% 8%;
 
     /* Trading specific colors */
-    --success: 142 71% 45%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
     --success-glow: 142 71% 60%;
     
@@ -118,12 +118,12 @@
     --accent-foreground: 240 5% 96%;
 
     /* Dark trading colors - maintain visibility */
-    --success: 142 71% 55%;
-    --success-foreground: 240 10% 4%;
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
     --success-glow: 142 71% 70%;
     
-    --danger: 0 84% 65%;
-    --danger-foreground: 240 10% 4%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
     --danger-glow: 0 84% 80%;
 
     /* Dark system colors */

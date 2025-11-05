@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import TradesList from "@/components/dashboard/TradesList";
+import StatsCards from "@/components/dashboard/StatsCards";
+import AdvancedCharts from "@/components/dashboard/AdvancedCharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CandleLoader from "@/components/ui/candle-loader";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format, parseISO } from "date-fns";
 
 interface Trade {
   id: string;
@@ -173,28 +171,6 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
     }
   }, [user, toast]);
 
-  const chartData = useMemo(() => {
-    const dailyStats: { [key: string]: { total: number; wins: number; losses: number; breakeven: number } } = {};
-    
-    trades.forEach(trade => {
-      const date = format(parseISO(trade.createdAt), 'MMM dd');
-      if (!dailyStats[date]) {
-        dailyStats[date] = { total: 0, wins: 0, losses: 0, breakeven: 0 };
-      }
-      dailyStats[date].total++;
-      
-      if (trade.result === 'WIN') dailyStats[date].wins++;
-      else if (trade.result === 'LOSS') dailyStats[date].losses++;
-      else if (trade.result === 'BE') dailyStats[date].breakeven++;
-    });
-    
-    return Object.entries(dailyStats)
-      .map(([date, stats]) => ({
-        date,
-        ...stats
-      }))
-      .slice(-30);
-  }, [trades]);
 
   if (loading) {
     return (
@@ -221,32 +197,9 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
           </div>
         </div>
 
-        <Card className="shadow-card border-border/50">
-          <CardHeader>
-            <CardTitle>Trading Performance Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} name="Total Trades" />
-                <Line type="monotone" dataKey="wins" stroke="hsl(var(--success))" strokeWidth={2} name="Wins" />
-                <Line type="monotone" dataKey="losses" stroke="hsl(var(--danger))" strokeWidth={2} name="Losses" />
-                <Line type="monotone" dataKey="breakeven" stroke="hsl(var(--muted-foreground))" strokeWidth={2} name="Breakeven" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <StatsCards trades={trades} />
+        
+        <AdvancedCharts trades={trades} />
 
         <TradesList 
           trades={trades} 
