@@ -64,10 +64,10 @@ const TradingOverviewPage = () => {
     const stats = { total: 0, wins: 0, losses: 0, breakeven: 0 };
     filteredTrades.forEach(trade => {
       stats.total++;
-      const result = trade.result.toLowerCase();
-      if (result.includes('win') || result.includes('profit')) stats.wins++;
-      else if (result.includes('loss') || result.includes('lose')) stats.losses++;
-      else stats.breakeven++;
+      const result = trade.result?.toUpperCase() || '';
+      if (result === 'WIN') stats.wins++;
+      else if (result === 'LOSS') stats.losses++;
+      else if (result === 'BE' || result === 'BREAKEVEN') stats.breakeven++;
     });
     return stats;
   }, [filteredTrades]);
@@ -101,6 +101,51 @@ const TradingOverviewPage = () => {
           <p className="text-muted-foreground mt-2 text-lg">
             Track your trading performance with visual calendar view
           </p>
+        </div>
+
+        {/* Trade Summary Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="shadow-card border-border/50 bg-gradient-to-br from-card to-card/50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Total Trades</p>
+                  <p className="text-3xl font-bold mt-2">{strategyStats.total}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-2xl">📊</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card border-border/50 bg-gradient-to-br from-success/5 to-success/10">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-success font-medium">Winning Trades</p>
+                  <p className="text-3xl font-bold text-success mt-2">{strategyStats.wins}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                  <span className="text-2xl">✅</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card border-border/50 bg-gradient-to-br from-danger/5 to-danger/10">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-danger font-medium">Losing Trades</p>
+                  <p className="text-3xl font-bold text-danger mt-2">{strategyStats.losses}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
+                  <span className="text-2xl">❌</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Strategy Filter Section */}

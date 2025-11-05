@@ -40,12 +40,15 @@ interface Trade {
 
 interface TradesListProps {
   trades: Trade[];
+  strategies?: string[];
+  selectedStrategy?: string;
+  onStrategyChange?: (strategy: string) => void;
   onUpdateTrade: (trade: Trade) => void;
   onDeleteTrade: (id: string) => void;
   onViewTrade: (tradeId: string) => void;
 }
 
-const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: TradesListProps) => {
+const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, onUpdateTrade, onDeleteTrade, onViewTrade }: TradesListProps) => {
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [editFormData, setEditFormData] = useState<Trade | null>(null);
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
@@ -191,8 +194,27 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
     <>
       <Card className="shadow-card border-border/50">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle>All Trades ({trades.length})</CardTitle>
+            
+            {strategies && onStrategyChange && (
+              <Select value={selectedStrategy} onValueChange={onStrategyChange}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter by strategy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {strategies.map(strategy => (
+                    <SelectItem key={strategy} value={strategy}>
+                      {strategy === 'all' ? 'All Strategies' : strategy}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between mt-2">
+            <div>
             {selectedTrades.size > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
@@ -215,6 +237,7 @@ const TradesList = ({ trades, onUpdateTrade, onDeleteTrade, onViewTrade }: Trade
                 </Button>
               </div>
             )}
+            </div>
           </div>
           {trades.length > 0 && (
             <div className="flex items-center gap-2 pt-2">

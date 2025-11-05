@@ -33,14 +33,14 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
       const stats = statsMap.get(tradeDate)!;
       stats.total++;
       
-      const result = trade.result?.toLowerCase() || '';
-      if (result === 'win' || result.includes('win')) {
+      const result = trade.result?.toUpperCase() || '';
+      if (result === 'WIN') {
         stats.wins++;
         stats.pnl += Math.random() * 5000 + 500;
-      } else if (result === 'loss' || result.includes('loss')) {
+      } else if (result === 'LOSS') {
         stats.losses++;
         stats.pnl -= Math.random() * 5000 + 500;
-      } else if (result === 'be' || result === 'breakeven') {
+      } else if (result === 'BE' || result === 'BREAKEVEN') {
         stats.breakeven++;
       }
     });

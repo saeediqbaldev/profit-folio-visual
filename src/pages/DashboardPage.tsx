@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TradesList from "@/components/dashboard/TradesList";
 import StatsCards from "@/components/dashboard/StatsCards";
 import AdvancedCharts from "@/components/dashboard/AdvancedCharts";
@@ -20,6 +21,7 @@ interface Trade {
   afterTradeScreenshot: string | null;
   assetPair: string;
   rr: string;
+  strategy?: string;
   createdAt: string;
 }
 
@@ -30,8 +32,21 @@ interface DashboardPageProps {
 const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Get unique strategies from trades
+  const strategies = useMemo(() => {
+    const uniqueStrategies = new Set(trades.map(t => t.strategy).filter(Boolean));
+    return ['all', ...Array.from(uniqueStrategies)] as string[];
+  }, [trades]);
+
+  // Filter trades by selected strategy
+  const filteredTrades = useMemo(() => {
+    if (selectedStrategy === 'all') return trades;
+    return trades.filter(t => t.strategy === selectedStrategy);
+  }, [trades, selectedStrategy]);
 
   // Load trades from Supabase on component mount
   useEffect(() => {
@@ -71,6 +86,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
             afterTradeScreenshot: trade.after_trade_screenshot_url,
             assetPair: trade.asset_pair || '',
             rr: trade.rr || '',
+            strategy: trade.strategy || '',
             createdAt: trade.created_at,
           }));
           setTrades(transformedTrades);
@@ -202,7 +218,10 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
         <AdvancedCharts trades={trades} />
 
         <TradesList 
-          trades={trades} 
+          trades={filteredTrades}
+          strategies={strategies}
+          selectedStrategy={selectedStrategy}
+          onStrategyChange={setSelectedStrategy}
           onUpdateTrade={handleUpdateTrade}
           onDeleteTrade={handleDeleteTrade}
           onViewTrade={onViewTrade}
