@@ -24,7 +24,7 @@ type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
 const AdvancedCharts = memo(({ trades }: AdvancedChartsProps) => {
   const [chartType, setChartType] = useState<ChartType>('line');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('monthly');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('daily');
 
   const filterTradesByTime = (trades: Trade[], filter: TimeFilter) => {
     const now = new Date();

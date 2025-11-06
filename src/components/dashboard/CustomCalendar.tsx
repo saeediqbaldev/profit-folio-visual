@@ -9,7 +9,6 @@ interface DayStats {
   wins: number;
   losses: number;
   breakeven: number;
-  pnl: number;
 }
 
 interface CustomCalendarProps {
@@ -28,7 +27,7 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
     trades.forEach(trade => {
       const tradeDate = format(new Date(trade.created_at), 'yyyy-MM-dd');
       if (!statsMap.has(tradeDate)) {
-        statsMap.set(tradeDate, { total: 0, wins: 0, losses: 0, breakeven: 0, pnl: 0 });
+        statsMap.set(tradeDate, { total: 0, wins: 0, losses: 0, breakeven: 0 });
       }
       const stats = statsMap.get(tradeDate)!;
       stats.total++;
@@ -36,10 +35,8 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
       const result = trade.result?.toUpperCase() || '';
       if (result === 'WIN') {
         stats.wins++;
-        stats.pnl += Math.random() * 5000 + 500;
       } else if (result === 'LOSS') {
         stats.losses++;
-        stats.pnl -= Math.random() * 5000 + 500;
       } else if (result === 'BE' || result === 'BREAKEVEN') {
         stats.breakeven++;
       }
@@ -54,20 +51,13 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
-  const formatPnL = (amount: number) => {
-    const absAmount = Math.abs(amount);
-    if (absAmount >= 1000) {
-      return `${amount < 0 ? '-' : ''}$${(absAmount / 1000).toFixed(2)}K`;
-    }
-    return `${amount < 0 ? '-' : ''}$${absAmount.toFixed(0)}`;
-  };
-
   const getDayBackgroundClass = (stats: DayStats | undefined) => {
     if (!stats || stats.total === 0) return 'bg-card hover:bg-muted/50';
     
-    if (stats.pnl > 0) {
+    const winRate = stats.total > 0 ? (stats.wins / stats.total) : 0;
+    if (winRate > 0.6) {
       return 'bg-success/10 hover:bg-success/20 border-success/30';
-    } else if (stats.pnl < 0) {
+    } else if (winRate < 0.4 && stats.losses > 0) {
       return 'bg-danger/10 hover:bg-danger/20 border-danger/30';
     } else {
       return 'bg-muted/30 hover:bg-muted/50 border-muted-foreground/30';
@@ -139,17 +129,22 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
                   </div>
                   
                   {stats && stats.total > 0 && (
-                    <>
-                      <div className={cn(
-                        "text-lg font-bold mt-auto",
-                        stats.pnl > 0 ? "text-success" : stats.pnl < 0 ? "text-danger" : "text-muted-foreground"
-                      )}>
-                        {formatPnL(stats.pnl)}
+                    <div className="mt-auto space-y-1">
+                      <div className="text-xs font-semibold text-foreground">
+                        Total: {stats.total}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {stats.total} trade{stats.total !== 1 ? 's' : ''}
+                      <div className="text-xs text-success">
+                        Wins: {stats.wins}
                       </div>
-                    </>
+                      <div className="text-xs text-danger">
+                        Losses: {stats.losses}
+                      </div>
+                      {stats.breakeven > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          BE: {stats.breakeven}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

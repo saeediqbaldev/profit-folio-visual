@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import AuthPage from "@/components/auth/AuthPage";
 import Navbar from "@/components/layout/Navbar";
 import JournalPage from "@/pages/JournalPage";
@@ -14,12 +16,14 @@ import TradePage from "@/pages/TradePage";
 import TradingOverviewPage from "@/pages/TradingOverviewPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const { user, loading, signOut, isAuthenticated } = useAuth();
-  const [currentPage, setCurrentPage] = useState("journal");
+  const { isAdmin } = useUserRole();
+  const [currentPage, setCurrentPage] = useState("dashboard");
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
 
   const handleLogout = async () => {
@@ -76,22 +80,33 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <div className="min-h-screen bg-background">
-            <Navbar 
-              currentPage={currentPage}
-              onNavigate={handleNavigate}
-              onLogout={handleLogout}
-            />
-            {currentPage === "journal" && <JournalPage />}
-            {currentPage === "dashboard" && <DashboardPage onViewTrade={handleViewTrade} />}
-            {currentPage === "overview" && <TradingOverviewPage />}
-            {currentPage === "profile" && <ProfilePage />}
-            {currentPage === "admin" && <AdminPage />}
-            {currentPage === "trade" && selectedTradeId && (
-              <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("dashboard")} />
-            )}
-            <Lightbox />
-          </div>
+          <SidebarProvider defaultOpen={true}>
+            <div className="flex min-h-screen w-full bg-background">
+              <AppSidebar 
+                currentPage={currentPage}
+                onNavigate={handleNavigate}
+                isAdmin={isAdmin}
+              />
+              <div className="flex-1 flex flex-col w-full">
+                <Navbar 
+                  currentPage={currentPage}
+                  onNavigate={handleNavigate}
+                  onLogout={handleLogout}
+                />
+                <main className="flex-1 overflow-auto">
+                  {currentPage === "journal" && <JournalPage />}
+                  {currentPage === "dashboard" && <DashboardPage onViewTrade={handleViewTrade} />}
+                  {currentPage === "overview" && <TradingOverviewPage />}
+                  {currentPage === "profile" && <ProfilePage />}
+                  {currentPage === "admin" && <AdminPage />}
+                  {currentPage === "trade" && selectedTradeId && (
+                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("dashboard")} />
+                  )}
+                </main>
+              </div>
+              <Lightbox />
+            </div>
+          </SidebarProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

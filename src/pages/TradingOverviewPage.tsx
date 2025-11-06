@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import CandleLoader from "@/components/ui/candle-loader";
 import CustomCalendar from "@/components/dashboard/CustomCalendar";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { format, startOfMonth } from 'date-fns';
 
 interface Trade {
   id: string;
@@ -77,6 +78,28 @@ const TradingOverviewPage = () => {
     { name: 'Losses', value: strategyStats.losses, color: 'hsl(var(--danger))' },
     { name: 'Breakeven', value: strategyStats.breakeven, color: 'hsl(var(--muted-foreground))' },
   ].filter(item => item.value > 0), [strategyStats]);
+
+  const generatePerformanceData = (trades: Trade[]) => {
+    const monthlyData: { [key: string]: { wins: number; losses: number; breakeven: number } } = {};
+    
+    trades.forEach(trade => {
+      const date = new Date(trade.created_at);
+      const monthKey = format(startOfMonth(date), 'MMM yyyy');
+      
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { wins: 0, losses: 0, breakeven: 0 };
+      }
+      
+      const result = trade.result?.toUpperCase() || '';
+      if (result === 'WIN') monthlyData[monthKey].wins++;
+      else if (result === 'LOSS') monthlyData[monthKey].losses++;
+      else if (result === 'BE' || result === 'BREAKEVEN') monthlyData[monthKey].breakeven++;
+    });
+
+    return Object.entries(monthlyData)
+      .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+      .map(([date, data]) => ({ date, ...data }));
+  };
 
 
 
@@ -229,9 +252,9 @@ const TradingOverviewPage = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={[strategyStats]}>
+                <LineChart data={generatePerformanceData(filteredTrades)}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="name" />
+                  <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip 
                     contentStyle={{
@@ -241,10 +264,10 @@ const TradingOverviewPage = () => {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="wins" fill="hsl(var(--success))" name="Wins" />
-                  <Bar dataKey="losses" fill="hsl(var(--danger))" name="Losses" />
-                  <Bar dataKey="breakeven" fill="hsl(var(--muted-foreground))" name="Breakeven" />
-                </BarChart>
+                  <Line type="monotone" dataKey="wins" stroke="hsl(var(--success))" strokeWidth={2} name="Wins" />
+                  <Line type="monotone" dataKey="losses" stroke="hsl(var(--danger))" strokeWidth={2} name="Losses" />
+                  <Line type="monotone" dataKey="breakeven" stroke="hsl(var(--muted-foreground))" strokeWidth={2} name="Breakeven" />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
