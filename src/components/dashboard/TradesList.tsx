@@ -35,6 +35,7 @@ interface Trade {
   screenshot: string | null;
   afterTradeScreenshot: string | null;
   assetPair: string;
+  rr: string;
   createdAt: string;
 }
 
@@ -346,6 +347,15 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
                               id="edit-sl"
                               value={editFormData.sl}
                               onChange={(e) => handleEditInputChange('sl', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-rr">Risk/Reward Ratio</Label>
+                            <Input
+                              id="edit-rr"
+                              value={editFormData.rr}
+                              onChange={(e) => handleEditInputChange('rr', e.target.value)}
+                              placeholder="e.g., 1:2, 1:3"
                             />
                           </div>
                           <div className="space-y-2">

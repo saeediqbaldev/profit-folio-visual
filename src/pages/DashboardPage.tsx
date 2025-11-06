@@ -50,6 +50,8 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
 
   // Load trades from Supabase on component mount
   useEffect(() => {
+    let isMounted = true;
+    
     const loadTrades = async () => {
       if (!user) {
         setLoading(false);
@@ -65,15 +67,16 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
 
         if (error) {
           console.error('Error loading trades:', error);
-          toast({
-            variant: "destructive",
-            title: "Error loading trades",
-            description: "Failed to load your trades from the database.",
-          });
-        } else {
-          console.log('Loaded trades from database:', data?.length || 0, 'trades');
+          if (isMounted) {
+            toast({
+              variant: "destructive",
+              title: "Error loading trades",
+              description: "Failed to load your trades from the database.",
+            });
+          }
+        } else if (isMounted) {
           // Transform Supabase data to match frontend interface
-          const transformedTrades = data.map(trade => ({
+          const transformedTrades = (data || []).map(trade => ({
             id: trade.id,
             sno: trade.sno,
             entry: trade.entry,
@@ -93,17 +96,25 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
         }
       } catch (error) {
         console.error('Error loading trades:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "An unexpected error occurred while loading trades.",
-        });
+        if (isMounted) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "An unexpected error occurred while loading trades.",
+          });
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadTrades();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user, toast]);
 
   const handleUpdateTrade = useCallback(async (updatedTrade: Trade) => {
