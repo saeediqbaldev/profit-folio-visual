@@ -204,7 +204,7 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <CandleLoader />
-          <span className="text-muted-foreground">Loading your trades...</span>
+          <span className="text-muted-foreground">Loading dashboard...</span>
         </div>
       </div>
     );

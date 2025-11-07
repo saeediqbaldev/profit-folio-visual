@@ -95,8 +95,8 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
 
       {/* Calendar Grid */}
       <div className="w-full">
-        {/* Week day headers */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        {/* Week day headers - Hidden on mobile for scrollable view */}
+        <div className="hidden md:grid grid-cols-7 gap-2 mb-2">
           {weekDays.map(day => (
             <div
               key={day}
@@ -107,8 +107,20 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
           ))}
         </div>
 
-        {/* Calendar days */}
-        <div className="grid grid-cols-7 gap-2">
+        {/* Mobile: Show day headers for 3-column grid */}
+        <div className="grid md:hidden grid-cols-3 gap-2 mb-2">
+          {['S', 'M', 'T'].map((day, idx) => (
+            <div
+              key={idx}
+              className="text-center text-xs font-semibold text-muted-foreground py-2"
+            >
+              {weekDays[idx * 2]}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar days - Responsive grid: 3 cols on mobile, 7 on desktop */}
+        <div className="grid grid-cols-3 md:grid-cols-7 gap-2 max-h-[600px] md:max-h-none overflow-y-auto md:overflow-visible scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
           {calendarDays.map((day, index) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const stats = getDayStats.get(dateStr);
@@ -118,29 +130,29 @@ const CustomCalendar = ({ trades }: CustomCalendarProps) => {
               <div
                 key={index}
                 className={cn(
-                  "min-h-[120px] p-3 rounded-lg border-2 transition-all duration-200",
+                  "min-h-[100px] md:min-h-[120px] p-2 md:p-3 rounded-lg border-2 transition-all duration-200",
                   getDayBackgroundClass(stats),
                   !isCurrentMonth && "opacity-40"
                 )}
               >
                 <div className="flex flex-col h-full">
-                  <div className="text-base font-semibold text-foreground mb-1">
+                  <div className="text-sm md:text-base font-semibold text-foreground mb-1">
                     {format(day, 'd')}
                   </div>
                   
                   {stats && stats.total > 0 && (
-                    <div className="mt-auto space-y-1">
-                      <div className="text-xs font-semibold text-foreground">
-                        Total: {stats.total}
+                    <div className="mt-auto space-y-0.5 md:space-y-1">
+                      <div className="text-[10px] md:text-xs font-semibold text-foreground">
+                        T: {stats.total}
                       </div>
-                      <div className="text-xs text-success">
-                        Wins: {stats.wins}
+                      <div className="text-[10px] md:text-xs text-success">
+                        W: {stats.wins}
                       </div>
-                      <div className="text-xs text-danger">
-                        Losses: {stats.losses}
+                      <div className="text-[10px] md:text-xs text-danger">
+                        L: {stats.losses}
                       </div>
                       {stats.breakeven > 0 && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-[10px] md:text-xs text-muted-foreground">
                           BE: {stats.breakeven}
                         </div>
                       )}

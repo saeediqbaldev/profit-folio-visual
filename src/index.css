@@ -17,10 +17,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 8%;
 
-    /* Primary brand colors - Professional blue */
-    --primary: 216 95% 53%;
+    /* Primary brand colors - Professional purple */
+    --primary: 270 80% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 216 100% 65%;
+    --primary-glow: 280 90% 70%;
 
     /* Secondary colors */
     --secondary: 214 32% 91%;
@@ -101,9 +101,9 @@
     --popover-foreground: 240 5% 96%;
 
     /* Dark primary colors */
-    --primary: 216 95% 65%;
+    --primary: 270 80% 65%;
     --primary-foreground: 240 10% 4%;
-    --primary-glow: 216 100% 75%;
+    --primary-glow: 280 90% 75%;
 
     /* Dark secondary colors */
     --secondary: 240 4% 16%;
