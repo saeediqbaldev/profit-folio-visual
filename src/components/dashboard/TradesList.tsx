@@ -270,30 +270,31 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
                 selectedTrades.has(trade.id) ? 'bg-primary/5 border-primary/50' : ''
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <Checkbox
                     checked={selectedTrades.has(trade.id)}
                     onCheckedChange={() => toggleTradeSelection(trade.id)}
                     aria-label={`Select trade ${trade.id}`}
                   />
                 {getResultIcon(trade.result)}
-                <div>
-                  <h3 className="font-medium">Entry: {trade.entry}</h3>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium truncate">Entry: {trade.entry}</h3>
                   <p className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(trade.createdAt))} ago
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {getResultBadge(trade.result)}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onViewTrade(trade.id)}
+                  className="flex-shrink-0"
                 >
-                  <Eye className="h-4 w-4 mr-1" />
-                  View
+                  <Eye className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">View</span>
                 </Button>
                 <Dialog>
                   <DialogTrigger asChild>
@@ -301,6 +302,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
                       variant="outline"
                       size="icon"
                       onClick={() => handleEditClick(trade)}
+                      className="flex-shrink-0"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -506,6 +508,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
                   variant="outline"
                   size="icon"
                   onClick={() => onDeleteTrade(trade.id)}
+                  className="flex-shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
