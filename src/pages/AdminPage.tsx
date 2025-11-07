@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Database, HardDrive, Activity, AlertTriangle, CheckCircle, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Database, HardDrive, Activity, AlertTriangle, CheckCircle, ShieldAlert, ExternalLink, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -282,27 +283,51 @@ const AdminPage = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Activity (Placeholder) */}
+        {/* Quick Actions */}
         <Card className="shadow-card border-border/50">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-muted/30 rounded-lg text-center">
-                <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-medium mb-1">User Management</h3>
-                <p className="text-sm text-muted-foreground">Manage user accounts and permissions</p>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <Users className="h-8 w-8 mx-auto mb-3 text-primary" />
+                <h3 className="font-medium mb-2 text-center">User Management</h3>
+                <p className="text-sm text-muted-foreground mb-4 text-center">Manage user accounts and permissions</p>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => window.open('https://supabase.com/dashboard/project/vmghabwzgzghigalicdq/auth/users', '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open Users
+                </Button>
               </div>
-              <div className="p-4 bg-muted/30 rounded-lg text-center">
-                <Database className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-medium mb-1">Database Backup</h3>
-                <p className="text-sm text-muted-foreground">Create and manage database backups</p>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <Database className="h-8 w-8 mx-auto mb-3 text-primary" />
+                <h3 className="font-medium mb-2 text-center">Database Management</h3>
+                <p className="text-sm text-muted-foreground mb-4 text-center">View and manage database tables</p>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => window.open('https://supabase.com/dashboard/project/vmghabwzgzghigalicdq/editor', '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open Database
+                </Button>
               </div>
-              <div className="p-4 bg-muted/30 rounded-lg text-center">
-                <Activity className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-medium mb-1">System Logs</h3>
-                <p className="text-sm text-muted-foreground">View system logs and analytics</p>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <FileText className="h-8 w-8 mx-auto mb-3 text-primary" />
+                <h3 className="font-medium mb-2 text-center">System Logs</h3>
+                <p className="text-sm text-muted-foreground mb-4 text-center">View authentication and database logs</p>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => window.open('https://supabase.com/dashboard/project/vmghabwzgzghigalicdq/logs/auth-logs', '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Logs
+                </Button>
               </div>
             </div>
           </CardContent>
