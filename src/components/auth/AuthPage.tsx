@@ -15,9 +15,13 @@ interface AuthPageProps {
 }
 
 const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    username: "",
+    fullName: "",
+    rememberMe: false,
+  });
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -26,36 +30,99 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    if (!formData.username || formData.username.length < 3) {
+      toast({
+        variant: "destructive",
+        title: "Invalid username",
+        description: "Username must be at least 3 characters long.",
+      });
+      return;
+    }
 
+    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid username",
+        description: "Username can only contain letters, numbers, and underscores.",
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
     try {
+      // Check if username already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', formData.username)
+        .maybeSingle();
+
+      if (existingProfile) {
+        toast({
+          variant: "destructive",
+          title: "Username taken",
+          description: "This username is already in use. Please choose another.",
+        });
+        setLoading(false);
+        return;
+      }
+
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: redirectUrl,
+          data: {
+            username: formData.username,
+            full_name: formData.fullName || "",
+          }
         }
       });
 
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Sign up failed",
-          description: error.message,
-        });
-      } else {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation link to complete your registration.",
-        });
+        if (error.message.includes('already registered')) {
+          toast({
+            variant: "destructive",
+            title: "Email already registered",
+            description: "This email is already in use. Please sign in or use a different email.",
+          });
+        } else {
+          throw error;
+        }
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+
+      if (data.user) {
+        // Create profile with username
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: data.user.id,
+            email: formData.email,
+            username: formData.username,
+            full_name: formData.fullName || "",
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
+        toast({
+          title: "Account created!",
+          description: "Please check your email to verify your account.",
+        });
+        onAuthSuccess();
+      }
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred.",
+        title: "Signup failed",
+        description: error.message,
       });
     } finally {
       setLoading(false);
@@ -65,36 +132,62 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
+    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      let email = formData.email;
 
-      if (!error && rememberMe) {
-        // Set session to persist by default with remember me
-        localStorage.setItem('sb-remember-me', 'true');
+      // Check if input is a username (no @ symbol)
+      if (!formData.email.includes('@')) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', formData.email)
+          .maybeSingle();
+
+        if (!profileData) {
+          toast({
+            variant: "destructive",
+            title: "Sign in failed",
+            description: "Invalid username or password.",
+          });
+          setLoading(false);
+          return;
+        }
+
+        email = profileData.email || '';
       }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: formData.password,
+      });
 
       if (error) {
         toast({
           variant: "destructive",
           title: "Sign in failed",
-          description: error.message,
+          description: "Invalid email/username or password.",
         });
-      } else {
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        if (formData.rememberMe) {
+          localStorage.setItem('sb-remember-me', 'true');
+        }
+
         toast({
           title: "Welcome back!",
           description: "Successfully signed into your trading journal.",
         });
         onAuthSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred.",
+        title: "Sign in failed",
+        description: error.message,
       });
     } finally {
       setLoading(false);
@@ -171,13 +264,13 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">Email or Username</Label>
                     <Input
                       id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="text"
+                      placeholder="Enter your email or username"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -188,8 +281,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signin-password"
                       type="password"
                       placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -198,8 +291,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="remember-me"
-                        checked={rememberMe}
-                        onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                        checked={formData.rememberMe}
+                        onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: checked as boolean })}
                       />
                       <Label htmlFor="remember-me" className="text-sm font-medium">
                         Remember me
@@ -278,13 +371,36 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
+                    <Label htmlFor="signup-fullname">Full Name (Optional)</Label>
+                    <Input
+                      id="signup-fullname"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username">Username</Label>
+                    <Input
+                      id="signup-username"
+                      type="text"
+                      placeholder="Choose a unique username"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
                       placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -294,9 +410,9 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Create a password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a password (min 6 characters)"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       required
                       minLength={6}
                       className="h-11"

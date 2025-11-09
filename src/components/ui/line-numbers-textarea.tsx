@@ -52,7 +52,7 @@ const LineNumbersTextarea = React.forwardRef<HTMLTextAreaElement, LineNumbersTex
         <textarea
           ref={ref || textareaRef}
           className={cn(
-            "flex-1 min-h-[120px] px-3 py-3 text-sm bg-transparent border-0 resize-none focus:outline-none focus:ring-0 font-mono leading-6",
+            "flex-1 min-h-[120px] px-3 py-3 text-sm bg-transparent border-0 resize-none focus:outline-none focus:ring-0 font-mono leading-6 overflow-hidden",
             className
           )}
           value={value}

@@ -18,6 +18,8 @@ interface Profile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  username: string | null;
+  phone: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +34,7 @@ const ProfilePage = () => {
     full_name: "",
     email: "",
     phone: "",
+    username: "",
   });
   const [passwordData, setPasswordData] = useState({
     newPassword: "",
@@ -68,7 +71,8 @@ const ProfilePage = () => {
         setFormData({
           full_name: data.full_name || "",
           email: data.email || user.email || "",
-          phone: user.phone || "",
+          phone: data.phone || "",
+          username: data.username || "",
         });
       } else {
         // Create profile if it doesn't exist
@@ -90,6 +94,7 @@ const ProfilePage = () => {
             full_name: "",
             email: user.email || "",
             phone: user.phone || "",
+            username: "",
           });
         }
       }
@@ -105,6 +110,46 @@ const ProfilePage = () => {
 
     setSaving(true);
     try {
+      // Check for duplicate username if changed
+      if (formData.username && formData.username !== profile.username) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', formData.username)
+          .neq('user_id', user.id)
+          .maybeSingle();
+
+        if (existingProfile) {
+          toast({
+            variant: "destructive",
+            title: "Username taken",
+            description: "This username is already in use. Please choose another.",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Check for duplicate phone if provided
+      if (formData.phone && formData.phone !== profile.phone) {
+        const { data: existingPhone } = await supabase
+          .from('profiles')
+          .select('phone')
+          .eq('phone', formData.phone)
+          .neq('user_id', user.id)
+          .maybeSingle();
+
+        if (existingPhone) {
+          toast({
+            variant: "destructive",
+            title: "Phone number taken",
+            description: "This phone number is already registered.",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
       // Update profile in database
       const { error: profileError } = await supabase
         .from('profiles')
@@ -112,10 +157,22 @@ const ProfilePage = () => {
           full_name: formData.full_name,
           email: formData.email,
           phone: formData.phone,
+          username: formData.username,
         })
         .eq('user_id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        if (profileError.message.includes('duplicate')) {
+          toast({
+            variant: "destructive",
+            title: "Duplicate entry",
+            description: "This username, email, or phone number is already in use.",
+          });
+          setSaving(false);
+          return;
+        }
+        throw profileError;
+      }
 
       // Update email in auth if changed
       if (formData.email !== user.email) {
@@ -123,6 +180,16 @@ const ProfilePage = () => {
           email: formData.email
         });
         if (emailError) throw emailError;
+      }
+
+      // Update phone in auth if changed
+      if (formData.phone && formData.phone !== user.phone) {
+        const { error: phoneError } = await supabase.auth.updateUser({
+          phone: formData.phone
+        });
+        if (phoneError && !phoneError.message.includes('not enabled')) {
+          console.error('Phone update error:', phoneError);
+        }
       }
 
       toast({
@@ -315,6 +382,15 @@ const ProfilePage = () => {
                     value={formData.full_name}
                     onChange={(e) => handleInputChange('full_name', e.target.value)}
                     placeholder="Enter your full name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    placeholder="Choose a unique username"
                   />
                 </div>
                 <div className="space-y-2">

@@ -17,6 +17,7 @@ import TradingOverviewPage from "@/pages/TradingOverviewPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import CandleLoader from "@/components/ui/candle-loader";
 
 const queryClient = new QueryClient();
 
@@ -49,8 +50,8 @@ const App = () => {
         <ThemeProvider defaultTheme="light" storageKey="trading-journal-theme">
           <TooltipProvider>
             <div className="min-h-screen bg-background flex items-center justify-center">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="flex flex-col items-center gap-4">
+                <CandleLoader />
                 <span className="text-muted-foreground">Loading...</span>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { PenTool, LayoutDashboard, Calendar, User, Settings, TrendingUp } from "lucide-react";
+import { PenTool, LayoutDashboard, Calendar, User, Settings, TrendingUp, X } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,8 +9,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 interface AppSidebarProps {
   currentPage: string;
@@ -19,6 +20,8 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps) {
+  const { setOpenMobile, isMobile } = useSidebar();
+  
   const navigation = [
     { id: "journal", label: "Add Trades", icon: PenTool },
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -27,18 +30,37 @@ export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Settings }] : []),
   ];
 
+  const handleNavigate = (page: string) => {
+    onNavigate(page);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-border/50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-primary to-primary-glow rounded-lg shadow-elegant">
-            <TrendingUp className="h-5 w-5 text-primary-foreground" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-primary to-primary-glow rounded-lg shadow-elegant">
+              <TrendingUp className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+                Trading Journal
+              </h1>
+            </div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Trading Journal
-            </h1>
-          </div>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpenMobile(false)}
+              className="md:hidden"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </SidebarHeader>
       
@@ -53,7 +75,7 @@ export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps
                 return (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton
-                      onClick={() => onNavigate(item.id)}
+                      onClick={() => handleNavigate(item.id)}
                       isActive={isActive}
                       tooltip={item.label}
                     >

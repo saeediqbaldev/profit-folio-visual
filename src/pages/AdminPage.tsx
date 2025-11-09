@@ -6,6 +6,7 @@ import { Users, Database, HardDrive, Activity, AlertTriangle, CheckCircle, Shiel
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import CandleLoader from "@/components/ui/candle-loader";
 
 interface AdminStats {
   totalUsers: number;
@@ -121,8 +122,8 @@ const AdminPage = () => {
   if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <CandleLoader />
           <span className="text-muted-foreground">Loading admin data...</span>
         </div>
       </div>
