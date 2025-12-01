@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Database, HardDrive, Activity, AlertTriangle, CheckCircle, ShieldAlert, ExternalLink, FileText } from "lucide-react";
+import UserManagement from "@/components/admin/UserManagement";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -283,6 +284,9 @@ const AdminPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* User Management Section */}
+        <UserManagement />
 
         {/* Quick Actions */}
         <Card className="shadow-card border-border/50">
