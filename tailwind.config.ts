@@ -58,6 +58,7 @@ export default {
           foreground: "hsl(var(--danger-foreground))",
           glow: "hsl(var(--danger-glow))",
         },
+        "accent-blue": "hsl(var(--accent-blue))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
 import TradePage from "@/pages/TradePage";
 import TradingOverviewPage from "@/pages/TradingOverviewPage";
+import LandingPage from "@/pages/LandingPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -26,10 +27,21 @@ const App = () => {
   const { isAdmin } = useUserRole();
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
+  const [showLanding, setShowLanding] = useState(true);
+
+  // Check if user wants to skip landing page (e.g., coming from auth)
+  useEffect(() => {
+    const skipLanding = sessionStorage.getItem('skip-landing');
+    if (skipLanding === 'true' || isAuthenticated) {
+      setShowLanding(false);
+    }
+  }, [isAuthenticated]);
 
   const handleLogout = async () => {
     await signOut();
-    setCurrentPage("journal");
+    setCurrentPage("dashboard");
+    setShowLanding(true);
+    sessionStorage.removeItem('skip-landing');
   };
 
   const handleNavigate = (page: string) => {
@@ -42,6 +54,11 @@ const App = () => {
   const handleViewTrade = (tradeId: string) => {
     setSelectedTradeId(tradeId);
     setCurrentPage("trade");
+  };
+
+  const handleAuthSuccess = () => {
+    sessionStorage.setItem('skip-landing', 'true');
+    setShowLanding(false);
   };
 
   if (loading) {
@@ -61,6 +78,21 @@ const App = () => {
     );
   }
 
+  // Show landing page for non-authenticated users who haven't explicitly navigated to auth
+  if (!isAuthenticated && showLanding) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="light" storageKey="trading-journal-theme">
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <LandingPage />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -68,7 +100,7 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <AuthPage onAuthSuccess={() => {}} />
+            <AuthPage onAuthSuccess={handleAuthSuccess} />
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
