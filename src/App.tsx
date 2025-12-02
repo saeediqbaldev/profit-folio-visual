@@ -133,7 +133,7 @@ const App = () => {
                   {currentPage === "profile" && <ProfilePage />}
                   {currentPage === "admin" && <AdminPage />}
                   {currentPage === "trade" && selectedTradeId && (
-                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("dashboard")} />
+                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("dashboard")} viewOnly={true} />
                   )}
                 </main>
               </div>
