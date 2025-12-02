@@ -6,9 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
-import { Plus, Upload, X } from "lucide-react";
+import { Plus, Upload, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useStrategies } from "@/hooks/useStrategies";
 import { z } from "zod";
+import ProgressToast from "@/components/ui/progress-toast";
 
 // Security: Input validation schema
 const tradeSchema = z.object({
@@ -65,11 +67,14 @@ interface Trade {
 }
 
 interface TradeFormProps {
-  onAddTrade: (trade: Omit<Trade, 'id' | 'createdAt'>) => void;
+  onAddTrade: (trade: Omit<Trade, 'id' | 'createdAt'>) => Promise<void>;
 }
 
 const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   const { toast } = useToast();
+  const { strategies, loading: strategiesLoading } = useStrategies();
+  const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [formData, setFormData] = useState({
     strategy: "",
     entry: "",
@@ -162,7 +167,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     setFormData(prev => ({ ...prev, afterTradeScreenshot: null }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Security: Validate inputs with Zod schema
@@ -180,291 +185,331 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       }
     }
 
-    onAddTrade(formData);
-    
-    // Reset form
-    setFormData({
-      strategy: "",
-      entry: "",
-      reason: "",
-      tp: "",
-      sl: "",
-      rr: "",
-      result: "",
-      learning: "",
-      screenshot: null,
-      afterTradeScreenshot: null,
-      assetPair: "",
-    });
+    setSubmitting(true);
+    setProgress(10);
 
-    toast({
-      title: "Trade added successfully!",
-      description: "Your trade has been recorded in the journal.",
-    });
+    try {
+      setProgress(30);
+      await onAddTrade(formData);
+      setProgress(80);
+      
+      // Reset form
+      setFormData({
+        strategy: "",
+        entry: "",
+        reason: "",
+        tp: "",
+        sl: "",
+        rr: "",
+        result: "",
+        learning: "",
+        screenshot: null,
+        afterTradeScreenshot: null,
+        assetPair: "",
+      });
+
+      setProgress(100);
+      toast({
+        title: "Trade added successfully!",
+        description: "Your trade has been recorded in the journal.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add trade. Please try again.",
+      });
+    } finally {
+      setTimeout(() => {
+        setSubmitting(false);
+        setProgress(0);
+      }, 1000);
+    }
   };
 
   return (
-    <Card className="shadow-card border-border/50">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Add New Trade
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Two Column Layout for Desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="strategy">Strategy *</Label>
-                <Select
-                  value={formData.strategy}
-                  onValueChange={(value) => handleInputChange('strategy', value)}
-                  required
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select strategy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OTE Setup">OTE Setup</SelectItem>
-                    <SelectItem value="Momentum Shift">Momentum Shift</SelectItem>
-                    <SelectItem value="Inverse Closing (2CR)">Inverse Closing (2CR)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assetPair">Asset Pair *</Label>
-                <Select
-                  value={formData.assetPair}
-                  onValueChange={(value) => handleInputChange('assetPair', value)}
-                  required
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select asset pair" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="XAUUSD">XAUUSD (Gold)</SelectItem>
-                    <SelectItem value="BTCUSD">BTCUSD (Bitcoin)</SelectItem>
-                    <SelectItem value="ETHUSD">ETHUSD (Ethereum)</SelectItem>
-                    <SelectItem value="USOIL">USOIL (Oil)</SelectItem>
-                    <SelectItem value="SILVER">SILVER</SelectItem>
-                    <SelectItem value="EURUSD">EURUSD (Euro)</SelectItem>
-                    <SelectItem value="GBPJPY">GBPJPY (Pound/Yen)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="entry">Entry Price *</Label>
-                <Input
-                  id="entry"
-                  type="text"
-                  placeholder="e.g., 1.2345"
-                  value={formData.entry}
-                  onChange={(e) => handleInputChange('entry', e.target.value)}
-                  className="h-11"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sl">Stop Loss *</Label>
-                <Input
-                  id="sl"
-                  type="text"
-                  placeholder="e.g., 1.2300"
-                  value={formData.sl}
-                  onChange={(e) => handleInputChange('sl', e.target.value)}
-                  className="h-11"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="rr">Risk Reward R/R *</Label>
-                <Input
-                  id="rr"
-                  type="text"
-                  placeholder="e.g., 1:3"
-                  value={formData.rr}
-                  onChange={(e) => handleInputChange('rr', e.target.value)}
-                  className="h-11"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tp">Take Profits *</Label>
-                <LineNumbersTextarea
-                  value={formData.tp}
-                  onChange={(e) => handleInputChange('tp', e.target.value)}
-                  placeholder="Enter take profit levels:&#10;TP1: 1.2400&#10;TP2: 1.2450&#10;TP3: 1.2500"
-                  className="min-h-[100px]"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="reason">Trade Logic / Reason *</Label>
-                <Textarea
-                  id="reason"
-                  placeholder="Explain your trade logic and reason for entry..."
-                  value={formData.reason}
-                  onChange={(e) => handleInputChange('reason', e.target.value)}
-                  className="min-h-[150px] resize-none"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="result">Trade Result *</Label>
-                <Select
-                  value={formData.result}
-                  onValueChange={(value) => handleInputChange('result', value)}
-                  required
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select trade result" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="WIN">WIN</SelectItem>
-                    <SelectItem value="LOSS">LOSS</SelectItem>
-                    <SelectItem value="BE">BE (Break Even)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="learning">Learning Outcome *</Label>
-                <Textarea
-                  id="learning"
-                  placeholder="What did you learn from this trade?"
-                  value={formData.learning}
-                  onChange={(e) => handleInputChange('learning', e.target.value)}
-                  className="min-h-[150px] resize-none"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Screenshot Uploads - Side by Side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Setup Screenshot Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="screenshot">Setup Screenshot</Label>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('screenshot')?.click()}
-                    className="flex items-center gap-2"
+    <>
+      <ProgressToast 
+        title="Adding trade..." 
+        progress={progress} 
+        isVisible={submitting || progress > 0} 
+      />
+      
+      <Card className="shadow-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Add New Trade
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Two Column Layout for Desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="strategy">Strategy *</Label>
+                  <Select
+                    value={formData.strategy}
+                    onValueChange={(value) => handleInputChange('strategy', value)}
+                    required
+                    disabled={strategiesLoading}
                   >
-                    <Upload className="h-4 w-4" />
-                    Upload Image
-                  </Button>
-                  <span className="text-sm text-muted-foreground">PNG, JPG only</span>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder={strategiesLoading ? "Loading..." : "Select strategy"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {strategies.map((strategy) => (
+                        <SelectItem key={strategy} value={strategy}>
+                          {strategy}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <input
-                  id="screenshot"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                
-                {formData.screenshot && (
-                  <div className="relative inline-block">
-                    <img
-                      src={formData.screenshot}
-                      alt="Setup screenshot"
-                      className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => {
-                        const event = new CustomEvent('openLightbox', { detail: formData.screenshot });
-                        window.dispatchEvent(event);
-                      }}
-                    />
+
+                <div className="space-y-2">
+                  <Label htmlFor="assetPair">Asset Pair *</Label>
+                  <Select
+                    value={formData.assetPair}
+                    onValueChange={(value) => handleInputChange('assetPair', value)}
+                    required
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select asset pair" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="XAUUSD">XAUUSD (Gold)</SelectItem>
+                      <SelectItem value="BTCUSD">BTCUSD (Bitcoin)</SelectItem>
+                      <SelectItem value="ETHUSD">ETHUSD (Ethereum)</SelectItem>
+                      <SelectItem value="USOIL">USOIL (Oil)</SelectItem>
+                      <SelectItem value="SILVER">SILVER</SelectItem>
+                      <SelectItem value="EURUSD">EURUSD (Euro)</SelectItem>
+                      <SelectItem value="GBPJPY">GBPJPY (Pound/Yen)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="entry">Entry Price *</Label>
+                  <Input
+                    id="entry"
+                    type="text"
+                    placeholder="e.g., 1.2345"
+                    value={formData.entry}
+                    onChange={(e) => handleInputChange('entry', e.target.value)}
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sl">Stop Loss *</Label>
+                  <Input
+                    id="sl"
+                    type="text"
+                    placeholder="e.g., 1.2300"
+                    value={formData.sl}
+                    onChange={(e) => handleInputChange('sl', e.target.value)}
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rr">Risk Reward R/R *</Label>
+                  <Input
+                    id="rr"
+                    type="text"
+                    placeholder="e.g., 1:3"
+                    value={formData.rr}
+                    onChange={(e) => handleInputChange('rr', e.target.value)}
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tp">Take Profits *</Label>
+                  <LineNumbersTextarea
+                    value={formData.tp}
+                    onChange={(e) => handleInputChange('tp', e.target.value)}
+                    placeholder="Enter take profit levels:&#10;TP1: 1.2400&#10;TP2: 1.2450&#10;TP3: 1.2500"
+                    className="min-h-[100px]"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Trade Logic / Reason *</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Explain your trade logic and reason for entry..."
+                    value={formData.reason}
+                    onChange={(e) => handleInputChange('reason', e.target.value)}
+                    className="min-h-[150px] resize-none"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="result">Trade Result *</Label>
+                  <Select
+                    value={formData.result}
+                    onValueChange={(value) => handleInputChange('result', value)}
+                    required
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select trade result" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WIN">WIN</SelectItem>
+                      <SelectItem value="LOSS">LOSS</SelectItem>
+                      <SelectItem value="BE">BE (Break Even)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="learning">Learning Outcome *</Label>
+                  <Textarea
+                    id="learning"
+                    placeholder="What did you learn from this trade?"
+                    value={formData.learning}
+                    onChange={(e) => handleInputChange('learning', e.target.value)}
+                    className="min-h-[150px] resize-none"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Screenshot Uploads - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Setup Screenshot Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="screenshot">Setup Screenshot</Label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
                     <Button
                       type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
-                      onClick={removeScreenshot}
+                      variant="outline"
+                      onClick={() => document.getElementById('screenshot')?.click()}
+                      className="flex items-center gap-2"
                     >
-                      <X className="h-3 w-3" />
+                      <Upload className="h-4 w-4" />
+                      Upload Image
                     </Button>
+                    <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* After Trade Screenshot Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="afterTradeScreenshot">After Trade Screenshot</Label>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('afterTradeScreenshot')?.click()}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload Image
-                  </Button>
-                  <span className="text-sm text-muted-foreground">PNG, JPG only</span>
+                  <input
+                    id="screenshot"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  
+                  {formData.screenshot && (
+                    <div className="relative inline-block">
+                      <img
+                        src={formData.screenshot}
+                        alt="Setup screenshot"
+                        className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => {
+                          const event = new CustomEvent('openLightbox', { detail: formData.screenshot });
+                          window.dispatchEvent(event);
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                        onClick={removeScreenshot}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <input
-                  id="afterTradeScreenshot"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  onChange={handleAfterTradeFileUpload}
-                  className="hidden"
-                />
-                
-                {formData.afterTradeScreenshot && (
-                  <div className="relative inline-block">
-                    <img
-                      src={formData.afterTradeScreenshot}
-                      alt="After trade screenshot"
-                      className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => {
-                        const event = new CustomEvent('openLightbox', { detail: formData.afterTradeScreenshot });
-                        window.dispatchEvent(event);
-                      }}
-                    />
+              </div>
+
+              {/* After Trade Screenshot Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="afterTradeScreenshot">After Trade Screenshot</Label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
                     <Button
                       type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
-                      onClick={removeAfterTradeScreenshot}
+                      variant="outline"
+                      onClick={() => document.getElementById('afterTradeScreenshot')?.click()}
+                      className="flex items-center gap-2"
                     >
-                      <X className="h-3 w-3" />
+                      <Upload className="h-4 w-4" />
+                      Upload Image
                     </Button>
+                    <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                   </div>
-                )}
+                  <input
+                    id="afterTradeScreenshot"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleAfterTradeFileUpload}
+                    className="hidden"
+                  />
+                  
+                  {formData.afterTradeScreenshot && (
+                    <div className="relative inline-block">
+                      <img
+                        src={formData.afterTradeScreenshot}
+                        alt="After trade screenshot"
+                        className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => {
+                          const event = new CustomEvent('openLightbox', { detail: formData.afterTradeScreenshot });
+                          window.dispatchEvent(event);
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-sm"
+                        onClick={removeAfterTradeScreenshot}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-primary to-primary-glow hover:shadow-elegant transition-all duration-300"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Trade
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-gradient-to-r from-primary to-primary-glow hover:shadow-elegant transition-all duration-300"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding Trade...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Trade
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </>
   );
 };
 

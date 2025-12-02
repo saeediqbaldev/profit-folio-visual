@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Mail, Save, Phone, Lock, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { User, Mail, Save, Phone, Lock, Trash2, Plus, X, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useStrategies } from "@/hooks/useStrategies";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileUpload from "@/components/profile/ProfileUpload";
 import CandleLoader from "@/components/ui/candle-loader";
@@ -27,6 +29,7 @@ interface Profile {
 const ProfilePage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { strategies, addStrategy, removeStrategy, maxStrategies, loading: strategiesLoading } = useStrategies();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,6 +45,8 @@ const ProfilePage = () => {
   });
   const [changingPassword, setChangingPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [newStrategy, setNewStrategy] = useState("");
+  const [addingStrategy, setAddingStrategy] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -226,7 +231,7 @@ const ProfilePage = () => {
           description: "Failed to update your profile picture.",
         });
       } else {
-        loadProfile(); // Reload to get updated data
+        loadProfile();
       }
     } catch (error) {
       console.error('Error saving avatar:', error);
@@ -286,12 +291,10 @@ const ProfilePage = () => {
     
     setDeleting(true);
     try {
-      // Delete user's data first
       await supabase.from('trades').delete().eq('user_id', user.id);
       await supabase.from('profiles').delete().eq('user_id', user.id);
       await supabase.from('activity_logs').delete().eq('user_id', user.id);
       
-      // Delete storage files if any
       const { data: files } = await supabase.storage
         .from('Trading Journal Bucket')
         .list(`${user.id}`);
@@ -308,7 +311,6 @@ const ProfilePage = () => {
         description: "Your account has been permanently deleted.",
       });
       
-      // Sign out - this will delete the user session
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch (error: any) {
@@ -321,6 +323,21 @@ const ProfilePage = () => {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleAddStrategy = async () => {
+    if (!newStrategy.trim()) return;
+    
+    setAddingStrategy(true);
+    const success = await addStrategy(newStrategy);
+    if (success) {
+      setNewStrategy("");
+    }
+    setAddingStrategy(false);
+  };
+
+  const handleRemoveStrategy = async (strategy: string) => {
+    await removeStrategy(strategy);
   };
 
   if (loading) {
@@ -438,6 +455,77 @@ const ProfilePage = () => {
           </Card>
         </div>
 
+        {/* Trading Strategies Card */}
+        <Card className="shadow-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Trading Strategies
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Manage your trading strategies (max {maxStrategies}). These will appear in the strategy dropdown when adding trades.
+            </p>
+            
+            {/* Current Strategies */}
+            <div className="flex flex-wrap gap-2">
+              {strategies.map((strategy) => (
+                <Badge 
+                  key={strategy} 
+                  variant="secondary" 
+                  className="px-3 py-1.5 text-sm flex items-center gap-2"
+                >
+                  {strategy}
+                  <button
+                    onClick={() => handleRemoveStrategy(strategy)}
+                    className="hover:text-destructive transition-colors"
+                    disabled={strategies.length <= 1}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+
+            {/* Add New Strategy */}
+            {strategies.length < maxStrategies && (
+              <div className="flex gap-2">
+                <Input
+                  value={newStrategy}
+                  onChange={(e) => setNewStrategy(e.target.value)}
+                  placeholder="Enter new strategy name"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddStrategy();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleAddStrategy}
+                  disabled={addingStrategy || !newStrategy.trim()}
+                  variant="outline"
+                >
+                  {addingStrategy ? (
+                    <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            <p className="text-xs text-muted-foreground">
+              {strategies.length} of {maxStrategies} strategies used
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Security Settings */}
         <Card className="shadow-card border-border/50">
           <CardHeader>
@@ -522,7 +610,6 @@ const ProfilePage = () => {
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

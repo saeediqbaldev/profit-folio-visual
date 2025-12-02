@@ -52,6 +52,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          strategies: string[] | null
           updated_at: string
           user_id: string
           username: string | null
@@ -63,6 +64,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          strategies?: string[] | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          strategies?: string[] | null
           updated_at?: string
           user_id?: string
           username?: string | null

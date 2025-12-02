@@ -105,12 +105,15 @@ const Lightbox = () => {
         {Math.round(zoom * 100)}%
       </div>
 
-      {/* Image */}
-      <div className="max-w-full max-h-full overflow-auto">
+      {/* Image container - 50% of viewport */}
+      <div 
+        className="flex items-center justify-center overflow-auto"
+        style={{ maxWidth: '50vw', maxHeight: '50vh' }}
+      >
         <img
           src={imageUrl}
           alt="Lightbox preview"
-          className="max-w-none transition-transform duration-200 ease-in-out"
+          className="max-w-full max-h-full object-contain transition-transform duration-200 ease-in-out"
           style={{
             transform: `scale(${zoom}) rotate(${rotation}deg)`,
             transformOrigin: 'center',
