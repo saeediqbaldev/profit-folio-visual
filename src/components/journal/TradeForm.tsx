@@ -6,10 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
-import { Plus, Upload, X, Loader2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Upload, X, Loader2, CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useStrategies } from "@/hooks/useStrategies";
 import { z } from "zod";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import ProgressToast from "@/components/ui/progress-toast";
 
 // Security: Input validation schema
@@ -75,6 +79,8 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   const { strategies, loading: strategiesLoading } = useStrategies();
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressStatus, setProgressStatus] = useState<"loading" | "success" | "error">("loading");
+  const [tradeDate, setTradeDate] = useState<Date | undefined>(undefined);
   const [formData, setFormData] = useState({
     strategy: "",
     entry: "",
@@ -186,12 +192,16 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     }
 
     setSubmitting(true);
-    setProgress(10);
+    setProgress(5);
+    setProgressStatus("loading");
 
     try {
-      setProgress(30);
-      await onAddTrade(formData);
-      setProgress(80);
+      setProgress(25);
+      await onAddTrade({
+        ...formData,
+        tradeDate: tradeDate ? format(tradeDate, 'yyyy-MM-dd') : undefined,
+      } as any);
+      setProgress(90);
       
       // Reset form
       setFormData({
@@ -207,13 +217,12 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
         afterTradeScreenshot: null,
         assetPair: "",
       });
+      setTradeDate(undefined);
 
       setProgress(100);
-      toast({
-        title: "Trade added successfully!",
-        description: "Your trade has been recorded in the journal.",
-      });
+      setProgressStatus("success");
     } catch (error) {
+      setProgressStatus("error");
       toast({
         variant: "destructive",
         title: "Error",
@@ -223,7 +232,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       setTimeout(() => {
         setSubmitting(false);
         setProgress(0);
-      }, 1000);
+      }, 2000);
     }
   };
 
@@ -232,7 +241,9 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       <ProgressToast 
         title="Adding trade..." 
         progress={progress} 
-        isVisible={submitting || progress > 0} 
+        isVisible={submitting || progress > 0}
+        status={progressStatus}
+        message={progressStatus === "success" ? "Trade added!" : progressStatus === "error" ? "Failed to add trade" : "Saving your trade..."}
       />
       
       <Card className="shadow-card border-border/50">
@@ -289,6 +300,34 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                       <SelectItem value="GBPJPY">GBPJPY (Pound/Yen)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Optional Date Picker */}
+                <div className="space-y-2">
+                  <Label>Trade Date (Optional)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full h-11 justify-start text-left font-normal",
+                          !tradeDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {tradeDate ? format(tradeDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={tradeDate}
+                        onSelect={setTradeDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">

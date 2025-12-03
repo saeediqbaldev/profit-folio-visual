@@ -11,9 +11,10 @@ interface DashboardPageProps {
 }
 
 const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
-  const { trades, loading, progress, updateTrade, deleteTrade } = useTrades();
+  const { trades, loading, progress, status, updateTrade, deleteTrade } = useTrades();
   const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
   const [updateProgress, setUpdateProgress] = useState(0);
+  const [updateStatus, setUpdateStatus] = useState<"loading" | "success" | "error">("loading");
 
   // Get unique strategies from trades - memoized
   const strategies = useMemo(() => {
@@ -29,25 +30,22 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
 
   // Handle trade update with progress
   const handleUpdateTrade = async (trade: any) => {
-    setUpdateProgress(10);
-    await updateTrade(trade, setUpdateProgress);
-    setTimeout(() => setUpdateProgress(0), 1000);
+    setUpdateProgress(5);
+    setUpdateStatus("loading");
+    await updateTrade(trade, (p, s) => {
+      setUpdateProgress(p);
+      if (s) setUpdateStatus(s);
+    });
+    setTimeout(() => setUpdateProgress(0), 2000);
   };
 
-  if (loading) {
+  // Show loader only on initial load when no trades exist
+  if (loading && trades.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <CandleLoader />
           <span className="text-muted-foreground">Loading dashboard...</span>
-          {progress > 0 && (
-            <div className="w-48 bg-muted rounded-full h-2 overflow-hidden">
-              <div 
-                className="bg-primary h-full transition-all duration-300 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          )}
         </div>
       </div>
     );
@@ -55,10 +53,22 @@ const DashboardPage = ({ onViewTrade }: DashboardPageProps) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Loading progress toast */}
+      <ProgressToast 
+        title="Loading trades..." 
+        progress={progress} 
+        isVisible={progress > 0 && progress < 100} 
+        status={status}
+        message={status === "success" ? "Trades loaded!" : status === "error" ? "Failed to load" : "Fetching your trades..."}
+      />
+      
+      {/* Update progress toast */}
       <ProgressToast 
         title="Updating trade..." 
         progress={updateProgress} 
         isVisible={updateProgress > 0} 
+        status={updateStatus}
+        message={updateStatus === "success" ? "Trade updated!" : updateStatus === "error" ? "Update failed" : "Saving changes..."}
       />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">

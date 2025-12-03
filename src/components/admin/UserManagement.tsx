@@ -45,13 +45,18 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     try {
-      // Get all profiles
+      // Get all profiles - this should have all registered users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Loaded profiles:', profiles);
 
       // Get trade counts for each user
       const usersWithStats = await Promise.all(
