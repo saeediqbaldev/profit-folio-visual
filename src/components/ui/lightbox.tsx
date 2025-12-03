@@ -61,7 +61,7 @@ const Lightbox = () => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-2 sm:p-4"
       onClick={handleBackdropClick}
     >
       {/* Controls */}
@@ -105,10 +105,9 @@ const Lightbox = () => {
         {Math.round(zoom * 100)}%
       </div>
 
-      {/* Image container - 50% of viewport */}
+      {/* Image container - Full screen on mobile, 70% on desktop */}
       <div 
-        className="flex items-center justify-center overflow-auto"
-        style={{ maxWidth: '50vw', maxHeight: '50vh' }}
+        className="flex items-center justify-center overflow-auto w-full h-full sm:w-[70vw] sm:h-[70vh]"
       >
         <img
           src={imageUrl}

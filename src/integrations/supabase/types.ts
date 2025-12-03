@@ -99,6 +99,7 @@ export type Database = {
           sno: number
           strategy: string | null
           tp: string | null
+          trade_date: string | null
           updated_at: string
           user_id: string
         }
@@ -117,6 +118,7 @@ export type Database = {
           sno?: never
           strategy?: string | null
           tp?: string | null
+          trade_date?: string | null
           updated_at?: string
           user_id: string
         }
@@ -135,6 +137,7 @@ export type Database = {
           sno?: never
           strategy?: string | null
           tp?: string | null
+          trade_date?: string | null
           updated_at?: string
           user_id?: string
         }
