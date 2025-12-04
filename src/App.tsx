@@ -10,6 +10,7 @@ import AuthPage from "@/components/auth/AuthPage";
 import Navbar from "@/components/layout/Navbar";
 import JournalPage from "@/pages/JournalPage";
 import DashboardPage from "@/pages/DashboardPage";
+import TradingHistoryPage from "@/pages/TradingHistoryPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
 import TradePage from "@/pages/TradePage";
@@ -128,12 +129,13 @@ const App = () => {
                 />
                 <main className="flex-1 overflow-auto">
                   {currentPage === "journal" && <JournalPage />}
-                  {currentPage === "dashboard" && <DashboardPage onViewTrade={handleViewTrade} />}
+                  {currentPage === "dashboard" && <DashboardPage />}
+                  {currentPage === "history" && <TradingHistoryPage onViewTrade={handleViewTrade} />}
                   {currentPage === "overview" && <TradingOverviewPage />}
                   {currentPage === "profile" && <ProfilePage />}
                   {currentPage === "admin" && <AdminPage />}
                   {currentPage === "trade" && selectedTradeId && (
-                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("dashboard")} viewOnly={true} />
+                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("history")} viewOnly={true} />
                   )}
                 </main>
               </div>

@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
-const DEFAULT_STRATEGIES = ["OTE Setup", "Momentum Shift", "Inverse Closing (2CR)"];
+// Default strategies for new users
+const DEFAULT_STRATEGIES = ["Strategy 1", "Strategy 2", "Strategy 3"];
 const MAX_STRATEGIES = 5;
 
 export const useStrategies = () => {
@@ -32,7 +33,13 @@ export const useStrategies = () => {
       } else if (data?.strategies && data.strategies.length > 0) {
         setStrategies(data.strategies);
       } else {
+        // Set default strategies for new users
         setStrategies(DEFAULT_STRATEGIES);
+        // Save default strategies to profile
+        await supabase
+          .from('profiles')
+          .update({ strategies: DEFAULT_STRATEGIES })
+          .eq('user_id', user.id);
       }
     } catch (error) {
       console.error('Error loading strategies:', error);
