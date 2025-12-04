@@ -1,4 +1,4 @@
-import { PenTool, LayoutDashboard, Calendar, User, Settings, TrendingUp, X } from "lucide-react";
+import { PenTool, LayoutDashboard, Calendar, User, Settings, TrendingUp, X, History } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,8 @@ export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps
   
   const navigation = [
     { id: "journal", label: "Add Trades", icon: PenTool },
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "dashboard", label: "Stats / Analytics", icon: LayoutDashboard },
+    { id: "history", label: "Trading History", icon: History },
     { id: "overview", label: "Overview", icon: Calendar },
     { id: "profile", label: "Profile", icon: User },
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Settings }] : []),

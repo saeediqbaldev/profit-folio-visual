@@ -14,16 +14,24 @@ interface AuthPageProps {
   onAuthSuccess: () => void;
 }
 
+const DEFAULT_STRATEGIES = ["Strategy 1", "Strategy 2", "Strategy 3"];
+
 const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
-  const [formData, setFormData] = useState({
+  const [signInData, setSignInData] = useState({
+    email: "",
+    password: "",
+    rememberMe: false,
+  });
+  
+  const [signUpData, setSignUpData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
     username: "",
     fullName: "",
     phone: "",
-    rememberMe: false,
   });
+  
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -35,12 +43,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   // Real-time username availability check
   useEffect(() => {
     const checkUsername = async () => {
-      if (!formData.username || formData.username.length < 3) {
+      if (!signUpData.username || signUpData.username.length < 3) {
         setUsernameStatus('idle');
         return;
       }
 
-      if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      if (!/^[a-zA-Z0-9_]+$/.test(signUpData.username)) {
         setUsernameStatus('idle');
         return;
       }
@@ -50,7 +58,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       const { data } = await supabase
         .from('profiles')
         .select('username')
-        .eq('username', formData.username.toLowerCase())
+        .eq('username', signUpData.username.toLowerCase())
         .maybeSingle();
 
       setUsernameStatus(data ? 'taken' : 'available');
@@ -58,7 +66,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
     const debounce = setTimeout(checkUsername, 500);
     return () => clearTimeout(debounce);
-  }, [formData.username]);
+  }, [signUpData.username]);
 
   // Password validation
   const validatePassword = (password: string): string[] => {
@@ -73,28 +81,28 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   };
 
   useEffect(() => {
-    if (formData.password) {
-      setPasswordErrors(validatePassword(formData.password));
+    if (signUpData.password) {
+      setPasswordErrors(validatePassword(signUpData.password));
     } else {
       setPasswordErrors([]);
     }
-  }, [formData.password]);
+  }, [signUpData.password]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate all required fields
-    if (!formData.fullName.trim()) {
+    if (!signUpData.fullName.trim()) {
       toast({ variant: "destructive", title: "Full name is required" });
       return;
     }
 
-    if (!formData.username || formData.username.length < 3) {
+    if (!signUpData.username || signUpData.username.length < 3) {
       toast({ variant: "destructive", title: "Username must be at least 3 characters" });
       return;
     }
 
-    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+    if (!/^[a-zA-Z0-9_]+$/.test(signUpData.username)) {
       toast({ variant: "destructive", title: "Username can only contain letters, numbers, and underscores" });
       return;
     }
@@ -104,12 +112,17 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       return;
     }
 
-    if (!formData.email.trim()) {
+    if (!signUpData.email.trim()) {
       toast({ variant: "destructive", title: "Email is required" });
       return;
     }
 
-    if (!formData.phone.trim()) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signUpData.email)) {
+      toast({ variant: "destructive", title: "Please enter a valid email address" });
+      return;
+    }
+
+    if (!signUpData.phone.trim()) {
       toast({ variant: "destructive", title: "Phone number is required" });
       return;
     }
@@ -119,7 +132,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (signUpData.password !== signUpData.confirmPassword) {
       toast({ variant: "destructive", title: "Passwords do not match" });
       return;
     }
@@ -131,7 +144,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       const { data: existingPhone } = await supabase
         .from('profiles')
         .select('phone')
-        .eq('phone', formData.phone)
+        .eq('phone', signUpData.phone)
         .maybeSingle();
 
       if (existingPhone) {
@@ -143,14 +156,14 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       const redirectUrl = `${window.location.origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
+        email: signUpData.email.trim(),
+        password: signUpData.password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            username: formData.username.toLowerCase(),
-            full_name: formData.fullName,
-            phone: formData.phone,
+            username: signUpData.username.toLowerCase(),
+            full_name: signUpData.fullName.trim(),
+            phone: signUpData.phone.trim(),
           }
         }
       });
@@ -166,22 +179,39 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       }
 
       if (data.user) {
+        // Create profile with default strategies
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
             user_id: data.user.id,
-            email: formData.email,
-            username: formData.username.toLowerCase(),
-            full_name: formData.fullName,
-            phone: formData.phone,
+            email: signUpData.email.trim(),
+            username: signUpData.username.toLowerCase(),
+            full_name: signUpData.fullName.trim(),
+            phone: signUpData.phone.trim(),
+            strategies: DEFAULT_STRATEGIES,
           });
 
-        if (profileError) console.error('Profile creation error:', profileError);
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
 
-        toast({ title: "Account created!", description: "Please check your email to verify your account." });
-        onAuthSuccess();
+        toast({ 
+          title: "Account created!", 
+          description: "Please check your email to verify your account before signing in." 
+        });
+        
+        // Reset sign up form
+        setSignUpData({
+          email: "",
+          password: "",
+          confirmPassword: "",
+          username: "",
+          fullName: "",
+          phone: "",
+        });
       }
     } catch (error: any) {
+      console.error('Signup error:', error);
       toast({ variant: "destructive", title: "Signup failed", description: error.message });
     } finally {
       setLoading(false);
@@ -190,43 +220,66 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!signInData.email.trim()) {
+      toast({ variant: "destructive", title: "Email or username is required" });
+      return;
+    }
+    
+    if (!signInData.password) {
+      toast({ variant: "destructive", title: "Password is required" });
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      let email = formData.email;
+      let email = signInData.email.trim();
 
-      if (!formData.email.includes('@')) {
+      // If input doesn't contain @, treat it as username
+      if (!email.includes('@')) {
         const { data: profileData } = await supabase
           .from('profiles')
           .select('email')
-          .eq('username', formData.email.toLowerCase())
+          .eq('username', email.toLowerCase())
           .maybeSingle();
 
-        if (!profileData) {
+        if (!profileData || !profileData.email) {
           toast({ variant: "destructive", title: "Invalid username or password" });
           setLoading(false);
           return;
         }
-        email = profileData.email || '';
+        email = profileData.email;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
-        password: formData.password,
+        password: signInData.password,
       });
 
       if (error) {
-        toast({ variant: "destructive", title: "Invalid email/username or password" });
+        if (error.message.includes('Email not confirmed')) {
+          toast({ 
+            variant: "destructive", 
+            title: "Email not verified", 
+            description: "Please check your email and click the verification link before signing in." 
+          });
+        } else {
+          toast({ variant: "destructive", title: "Invalid email/username or password" });
+        }
         setLoading(false);
         return;
       }
 
       if (data.user) {
-        if (formData.rememberMe) localStorage.setItem('sb-remember-me', 'true');
+        if (signInData.rememberMe) {
+          localStorage.setItem('sb-remember-me', 'true');
+        }
         toast({ title: "Welcome back!", description: "Successfully signed in." });
         onAuthSuccess();
       }
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({ variant: "destructive", title: "Sign in failed", description: error.message });
     } finally {
       setLoading(false);
@@ -235,10 +288,16 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!resetEmail.trim()) {
+      toast({ variant: "destructive", title: "Email is required" });
+      return;
+    }
+    
     setResetLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
         redirectTo: `${window.location.origin}/`,
       });
 
@@ -291,8 +350,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signin-email"
                       type="text"
                       placeholder="Enter your email or username"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      value={signInData.email}
+                      onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -303,8 +362,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signin-password"
                       type="password"
                       placeholder="Enter your password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      value={signInData.password}
+                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -313,8 +372,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="remember-me"
-                        checked={formData.rememberMe}
-                        onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: checked as boolean })}
+                        checked={signInData.rememberMe}
+                        onCheckedChange={(checked) => setSignInData({ ...signInData, rememberMe: checked as boolean })}
                       />
                       <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
                     </div>
@@ -373,8 +432,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signup-fullname"
                       type="text"
                       placeholder="Enter your full name"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      value={signUpData.fullName}
+                      onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -386,8 +445,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                         id="signup-username"
                         type="text"
                         placeholder="Choose a unique username"
-                        value={formData.username}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        value={signUpData.username}
+                        onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
                         required
                         className="h-11 pr-10"
                       />
@@ -406,8 +465,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signup-email"
                       type="email"
                       placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      value={signUpData.email}
+                      onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -418,8 +477,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signup-phone"
                       type="tel"
                       placeholder="Enter your phone number"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      value={signUpData.phone}
+                      onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
                       required
                       className="h-11"
                     />
@@ -430,17 +489,23 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signup-password"
                       type="password"
                       placeholder="Create a strong password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      value={signUpData.password}
+                      onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
                       required
                       className="h-11"
                     />
-                    {formData.password && (
+                    {signUpData.password && (
                       <div className="text-xs space-y-1 mt-2">
                         {['At least 6 characters', 'Maximum 10 characters', 'At least 1 uppercase letter', 'At least 1 lowercase letter', 'At least 1 number', 'At least 1 special character'].map((rule) => (
-                          <div key={rule} className={`flex items-center gap-1 ${passwordErrors.includes(rule) ? 'text-destructive' : 'text-success'}`}>
-                            {passwordErrors.includes(rule) ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                            {rule}
+                          <div key={rule} className="flex items-center gap-1">
+                            {!passwordErrors.includes(rule) ? (
+                              <CheckCircle className="h-3 w-3 text-success" />
+                            ) : (
+                              <XCircle className="h-3 w-3 text-destructive" />
+                            )}
+                            <span className={!passwordErrors.includes(rule) ? 'text-success' : 'text-muted-foreground'}>
+                              {rule}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -452,22 +517,25 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       id="signup-confirm-password"
                       type="password"
                       placeholder="Confirm your password"
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      value={signUpData.confirmPassword}
+                      onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
                       required
                       className="h-11"
                     />
-                    {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                    {signUpData.confirmPassword && signUpData.password !== signUpData.confirmPassword && (
                       <p className="text-xs text-destructive">Passwords do not match</p>
+                    )}
+                    {signUpData.confirmPassword && signUpData.password === signUpData.confirmPassword && signUpData.password.length > 0 && (
+                      <p className="text-xs text-success">Passwords match!</p>
                     )}
                   </div>
                   <Button
                     type="submit"
-                    disabled={loading || usernameStatus === 'taken' || passwordErrors.length > 0}
+                    disabled={loading || usernameStatus === 'taken' || usernameStatus === 'checking'}
                     className="w-full h-11 bg-gradient-to-r from-primary to-primary-glow hover:shadow-elegant transition-all duration-300"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                    {loading ? "Creating account..." : "Sign Up"}
+                    {loading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
               </TabsContent>
