@@ -53,14 +53,14 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   // Real-time username availability check
   useEffect(() => {
     const checkUsername = async () => {
-      const username = signUpData.username.trim();
+      const username = signUpData.username.trim().toLowerCase();
       
       if (!username || username.length < 3) {
         setUsernameStatus('idle');
         return;
       }
 
-      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      if (!/^[a-zA-Z0-9_]+$/.test(signUpData.username)) {
         setUsernameStatus('idle');
         return;
       }
@@ -68,11 +68,11 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       setUsernameStatus('checking');
 
       try {
+        // Query all profiles and filter client-side for case-insensitive match
         const { data, error } = await supabase
           .from('profiles')
           .select('username')
-          .ilike('username', username)
-          .maybeSingle();
+          .not('username', 'is', null);
 
         if (error) {
           console.error('Username check error:', error);
@@ -80,7 +80,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
           return;
         }
 
-        setUsernameStatus(data ? 'taken' : 'available');
+        // Case-insensitive comparison
+        const isTaken = data?.some(profile => 
+          profile.username?.toLowerCase() === username
+        );
+        
+        setUsernameStatus(isTaken ? 'taken' : 'available');
       } catch (error) {
         console.error('Username check error:', error);
         setUsernameStatus('idle');
@@ -104,25 +109,24 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       setEmailStatus('checking');
 
       try {
-        // Check in profiles table first
-        const { data: profileData, error: profileError } = await supabase
+        // Query all profiles and filter client-side for case-insensitive match
+        const { data, error } = await supabase
           .from('profiles')
           .select('email')
-          .ilike('email', email)
-          .maybeSingle();
+          .not('email', 'is', null);
 
-        if (profileError) {
-          console.error('Email check error:', profileError);
+        if (error) {
+          console.error('Email check error:', error);
           setEmailStatus('idle');
           return;
         }
 
-        if (profileData) {
-          setEmailStatus('taken');
-          return;
-        }
-
-        setEmailStatus('available');
+        // Case-insensitive comparison
+        const isTaken = data?.some(profile => 
+          profile.email?.toLowerCase() === email
+        );
+        
+        setEmailStatus(isTaken ? 'taken' : 'available');
       } catch (error) {
         console.error('Email check error:', error);
         setEmailStatus('idle');
@@ -149,8 +153,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         const { data, error } = await supabase
           .from('profiles')
           .select('phone')
-          .eq('phone', phone)
-          .maybeSingle();
+          .eq('phone', phone);
 
         if (error) {
           console.error('Phone check error:', error);
@@ -158,7 +161,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
           return;
         }
 
-        setPhoneStatus(data ? 'taken' : 'available');
+        const isTaken = data && data.length > 0;
+        setPhoneStatus(isTaken ? 'taken' : 'available');
       } catch (error) {
         console.error('Phone check error:', error);
         setPhoneStatus('idle');
@@ -266,14 +270,22 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     setLoading(true);
 
     try {
+      const username = signUpData.username.trim().toLowerCase();
+      const email = signUpData.email.trim().toLowerCase();
+      const phone = signUpData.phone.trim();
+
       // Double-check username availability before signup
-      const { data: existingUsername } = await supabase
+      const { data: allUsernames, error: usernameError } = await supabase
         .from('profiles')
         .select('username')
-        .ilike('username', signUpData.username.trim())
-        .maybeSingle();
+        .not('username', 'is', null);
 
-      if (existingUsername) {
+      if (usernameError) {
+        console.error('Username check error:', usernameError);
+      }
+
+      const usernameExists = allUsernames?.some(p => p.username?.toLowerCase() === username);
+      if (usernameExists) {
         toast({ variant: "destructive", title: "Username already taken", description: "Please choose a different username." });
         setUsernameStatus('taken');
         setLoading(false);
@@ -281,13 +293,17 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       }
 
       // Double-check email availability
-      const { data: existingEmail } = await supabase
+      const { data: allEmails, error: emailError } = await supabase
         .from('profiles')
         .select('email')
-        .ilike('email', signUpData.email.trim())
-        .maybeSingle();
+        .not('email', 'is', null);
 
-      if (existingEmail) {
+      if (emailError) {
+        console.error('Email check error:', emailError);
+      }
+
+      const emailExists = allEmails?.some(p => p.email?.toLowerCase() === email);
+      if (emailExists) {
         toast({ variant: "destructive", title: "Email already registered", description: "This email is already associated with an account." });
         setEmailStatus('taken');
         setLoading(false);
@@ -295,13 +311,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       }
 
       // Double-check phone availability
-      const { data: existingPhone } = await supabase
+      const { data: existingPhones } = await supabase
         .from('profiles')
         .select('phone')
-        .eq('phone', signUpData.phone.trim())
-        .maybeSingle();
+        .eq('phone', phone);
 
-      if (existingPhone) {
+      if (existingPhones && existingPhones.length > 0) {
         toast({ variant: "destructive", title: "Phone number already registered", description: "This phone number is already associated with an account." });
         setPhoneStatus('taken');
         setLoading(false);
