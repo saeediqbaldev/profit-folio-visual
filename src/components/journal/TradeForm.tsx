@@ -531,7 +531,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-primary to-primary-glow hover:shadow-elegant transition-all duration-300"
+              className="w-full md:w-1/4 bg-gradient-to-r from-primary to-primary-glow hover:shadow-elegant transition-all duration-300"
             >
               {submitting ? (
                 <>

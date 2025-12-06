@@ -83,6 +83,57 @@ export type Database = {
         }
         Relationships: []
       }
+      psx_trades: {
+        Row: {
+          created_at: string
+          entry_price: number
+          id: string
+          profit_loss: number | null
+          result: string | null
+          shares_purchased: number
+          sno: number
+          stock_symbol: string
+          strategy: string | null
+          tp_exit_price: number | null
+          trade_date: string | null
+          trade_logic: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_price: number
+          id?: string
+          profit_loss?: number | null
+          result?: string | null
+          shares_purchased: number
+          sno?: number
+          stock_symbol: string
+          strategy?: string | null
+          tp_exit_price?: number | null
+          trade_date?: string | null
+          trade_logic?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_price?: number
+          id?: string
+          profit_loss?: number | null
+          result?: string | null
+          shares_purchased?: number
+          sno?: number
+          stock_symbol?: string
+          strategy?: string | null
+          tp_exit_price?: number | null
+          trade_date?: string | null
+          trade_logic?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           after_trade_screenshot_url: string | null

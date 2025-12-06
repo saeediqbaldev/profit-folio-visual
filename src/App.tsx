@@ -16,6 +16,10 @@ import AdminPage from "@/pages/AdminPage";
 import TradePage from "@/pages/TradePage";
 import TradingOverviewPage from "@/pages/TradingOverviewPage";
 import LandingPage from "@/pages/LandingPage";
+import PsxJournalPage from "@/pages/psx/PsxJournalPage";
+import PsxDashboardPage from "@/pages/psx/PsxDashboardPage";
+import PsxHistoryPage from "@/pages/psx/PsxHistoryPage";
+import PsxOverviewPage from "@/pages/psx/PsxOverviewPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -30,7 +34,6 @@ const App = () => {
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
   const [showLanding, setShowLanding] = useState(true);
 
-  // Check if user wants to skip landing page (e.g., coming from auth)
   useEffect(() => {
     const skipLanding = sessionStorage.getItem('skip-landing');
     if (skipLanding === 'true' || isAuthenticated) {
@@ -79,7 +82,6 @@ const App = () => {
     );
   }
 
-  // Show landing page for non-authenticated users who haven't explicitly navigated to auth
   if (!isAuthenticated && showLanding) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -128,10 +130,19 @@ const App = () => {
                   onLogout={handleLogout}
                 />
                 <main className="flex-1 overflow-auto">
+                  {/* Forex Pages */}
                   {currentPage === "journal" && <JournalPage />}
                   {currentPage === "dashboard" && <DashboardPage />}
                   {currentPage === "history" && <TradingHistoryPage onViewTrade={handleViewTrade} />}
                   {currentPage === "overview" && <TradingOverviewPage />}
+                  
+                  {/* PSX Pages */}
+                  {currentPage === "psx-journal" && <PsxJournalPage />}
+                  {currentPage === "psx-dashboard" && <PsxDashboardPage />}
+                  {currentPage === "psx-history" && <PsxHistoryPage />}
+                  {currentPage === "psx-overview" && <PsxOverviewPage />}
+                  
+                  {/* Common Pages */}
                   {currentPage === "profile" && <ProfilePage />}
                   {currentPage === "admin" && <AdminPage />}
                   {currentPage === "trade" && selectedTradeId && (
