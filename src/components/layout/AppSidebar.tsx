@@ -1,4 +1,4 @@
-import { PenTool, LayoutDashboard, Calendar, User, Settings, TrendingUp, X, History } from "lucide-react";
+import { PenTool, LayoutDashboard, Calendar, User, TrendingUp, X, History, ChevronDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 interface AppSidebarProps {
   currentPage: string;
@@ -19,16 +21,27 @@ interface AppSidebarProps {
   isAdmin: boolean;
 }
 
-export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps) {
+export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   const { setOpenMobile, isMobile } = useSidebar();
+  const [forexOpen, setForexOpen] = useState(true);
+  const [psxOpen, setPsxOpen] = useState(true);
   
-  const navigation = [
+  const forexNavigation = [
     { id: "journal", label: "Add Trades", icon: PenTool },
     { id: "dashboard", label: "Stats / Analytics", icon: LayoutDashboard },
     { id: "history", label: "Trading History", icon: History },
     { id: "overview", label: "Overview", icon: Calendar },
+  ];
+
+  const psxNavigation = [
+    { id: "psx-journal", label: "Add Trades", icon: PenTool },
+    { id: "psx-dashboard", label: "Stats / Analytics", icon: LayoutDashboard },
+    { id: "psx-history", label: "Trading History", icon: History },
+    { id: "psx-overview", label: "Overview", icon: Calendar },
+  ];
+
+  const accountNavigation = [
     { id: "profile", label: "Profile", icon: User },
-    ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Settings }] : []),
   ];
 
   const handleNavigate = (page: string) => {
@@ -66,11 +79,80 @@ export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps
       </SidebarHeader>
       
       <SidebarContent>
+        {/* Forex Category */}
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <Collapsible open={forexOpen} onOpenChange={setForexOpen}>
+            <CollapsibleTrigger className="w-full">
+              <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 transition-colors">
+                <span>Forex</span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${forexOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {forexNavigation.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentPage === item.id;
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigate(item.id)}
+                          isActive={isActive}
+                          tooltip={item.label}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        {/* PSX Stocks Category */}
+        <SidebarGroup>
+          <Collapsible open={psxOpen} onOpenChange={setPsxOpen}>
+            <CollapsibleTrigger className="w-full">
+              <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 transition-colors">
+                <span>PSX Stocks</span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${psxOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {psxNavigation.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentPage === item.id;
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigate(item.id)}
+                          isActive={isActive}
+                          tooltip={item.label}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        {/* Account */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => {
+              {accountNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPage === item.id;
                 return (
