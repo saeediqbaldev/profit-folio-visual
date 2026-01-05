@@ -263,12 +263,13 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          {trades.map((trade) => (
+          {trades.map((trade, index) => (
             <div
               key={trade.id}
-              className={`border border-border/50 rounded-lg p-4 space-y-3 hover:shadow-md transition-all ${
+              className={`border border-border/50 rounded-lg p-4 space-y-3 hover:shadow-md transition-all animate-fade-in ${
                 selectedTrades.has(trade.id) ? 'bg-primary/5 border-primary/50' : ''
               }`}
+              style={{ animationDelay: `${index * 30}ms` }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">

@@ -9,7 +9,7 @@ interface TradingHistoryPageProps {
 }
 
 const TradingHistoryPage = ({ onViewTrade }: TradingHistoryPageProps) => {
-  const { trades, loading, progress, status, updateTrade, deleteTrade } = useTrades();
+  const { trades, loading, progress, status, totalCount, loadedCount, updateTrade, deleteTrade } = useTrades();
   const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateStatus, setUpdateStatus] = useState<"loading" | "success" | "error">("loading");
@@ -58,6 +58,8 @@ const TradingHistoryPage = ({ onViewTrade }: TradingHistoryPageProps) => {
         isVisible={progress > 0 && progress < 100} 
         status={status}
         message={status === "success" ? "Trades loaded!" : status === "error" ? "Failed to load" : "Fetching your trades..."}
+        totalCount={totalCount}
+        loadedCount={loadedCount}
       />
       
       {/* Update progress toast */}

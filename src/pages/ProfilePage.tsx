@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, Save, Phone, Lock, Trash2, Plus, X, Target, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Save, Phone, Lock, Trash2, Plus, X, Target, Eye, EyeOff, Share2, Copy, Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useStrategies } from "@/hooks/useStrategies";
@@ -22,6 +23,7 @@ interface Profile {
   avatar_url: string | null;
   username: string | null;
   phone: string | null;
+  share_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +51,8 @@ const ProfilePage = () => {
   const [addingStrategy, setAddingStrategy] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(true);
   const [showConfirmPassword, setShowConfirmPassword] = useState(true);
+  const [shareEnabled, setShareEnabled] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -81,6 +85,7 @@ const ProfilePage = () => {
           phone: data.phone || "",
           username: data.username || "",
         });
+        setShareEnabled(data.share_enabled || false);
       } else {
         // Create profile if it doesn't exist
         const { data: newProfile, error: createError } = await supabase
@@ -525,6 +530,78 @@ const ProfilePage = () => {
             <p className="text-xs text-muted-foreground">
               {strategies.length} of {maxStrategies} strategies used
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Public Sharing Card */}
+        <Card className="shadow-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              Public Sharing
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enable public sharing to let others view your trading statistics and history (without sensitive data like screenshots).
+            </p>
+            
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
+              <div className="space-y-1">
+                <p className="font-medium">Share my trading progress</p>
+                <p className="text-sm text-muted-foreground">
+                  Anyone with the link can view your stats
+                </p>
+              </div>
+              <Switch
+                checked={shareEnabled}
+                onCheckedChange={async (checked) => {
+                  if (!user) return;
+                  setShareEnabled(checked);
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ share_enabled: checked })
+                    .eq('user_id', user.id);
+                  
+                  if (error) {
+                    toast({
+                      variant: "destructive",
+                      title: "Failed to update sharing settings",
+                    });
+                    setShareEnabled(!checked);
+                  } else {
+                    toast({
+                      title: checked ? "Sharing enabled" : "Sharing disabled",
+                      description: checked ? "Others can now view your trading stats" : "Your profile is now private",
+                    });
+                  }
+                }}
+              />
+            </div>
+
+            {shareEnabled && user && (
+              <div className="space-y-2">
+                <Label>Your public share link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/share/${user.id}`}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/share/${user.id}`);
+                      setCopied(true);
+                      toast({ title: "Link copied to clipboard" });
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

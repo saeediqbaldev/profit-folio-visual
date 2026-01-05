@@ -52,6 +52,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          share_enabled: boolean | null
           strategies: string[] | null
           updated_at: string
           user_id: string
@@ -64,6 +65,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          share_enabled?: boolean | null
           strategies?: string[] | null
           updated_at?: string
           user_id: string
@@ -76,6 +78,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          share_enabled?: boolean | null
           strategies?: string[] | null
           updated_at?: string
           user_id?: string
