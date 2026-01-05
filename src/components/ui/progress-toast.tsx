@@ -8,9 +8,11 @@ interface ProgressToastProps {
   isVisible: boolean;
   status?: "loading" | "success" | "error";
   message?: string;
+  totalCount?: number;
+  loadedCount?: number;
 }
 
-const ProgressToast = ({ title, progress, isVisible, status = "loading", message }: ProgressToastProps) => {
+const ProgressToast = ({ title, progress, isVisible, status = "loading", message, totalCount, loadedCount }: ProgressToastProps) => {
   const [show, setShow] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
   
@@ -73,9 +75,14 @@ const ProgressToast = ({ title, progress, isVisible, status = "loading", message
               <p className="text-sm text-muted-foreground">
                 {message || (isError ? "Failed!" : isSuccess ? "Complete!" : "Processing...")}
               </p>
-              <p className="text-sm font-medium text-foreground">
-                {Math.round(displayProgress)}%
-              </p>
+              <div className="flex items-center gap-2 text-sm">
+                {totalCount !== undefined && loadedCount !== undefined && !isSuccess && !isError && (
+                  <span className="text-muted-foreground">{loadedCount}/{totalCount} trades</span>
+                )}
+                <span className="font-medium text-foreground">
+                  {Math.round(displayProgress)}%
+                </span>
+              </div>
             </div>
           </div>
         </div>

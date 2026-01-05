@@ -30,6 +30,8 @@ export const useTrades = () => {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadedCount, setLoadedCount] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
   const loadingRef = useRef(false);
@@ -53,7 +55,7 @@ export const useTrades = () => {
     tradeDate: trade.trade_date || trade.created_at,
   });
 
-  // Load trades with caching and progress
+  // Load trades with progressive loading
   const loadTrades = useCallback(async (forceRefresh = false) => {
     if (!user) {
       setLoading(false);
@@ -75,46 +77,72 @@ export const useTrades = () => {
 
     setProgress(5);
     setStatus("loading");
+    setTrades([]); // Clear for fresh progressive load
     
     try {
-      // STEP 1: Load first 5 trades immediately for instant UI
-      setProgress(15);
-      const { data: initialData, error: initialError } = await supabase
+      // Get total count first
+      const { count, error: countError } = await supabase
+        .from('trades')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      if (countError) throw countError;
+
+      const total = count || 0;
+      setTotalCount(total);
+      setLoadedCount(0);
+      setProgress(10);
+
+      if (total === 0) {
+        setLoading(false);
+        setProgress(100);
+        setStatus("success");
+        loadingRef.current = false;
+        return;
+      }
+
+      // Load all trades at once but display progressively
+      const { data, error } = await supabase
         .from('trades')
         .select('id, sno, entry, result, asset_pair, rr, strategy, created_at, trade_date, reason, tp, sl, learning, screenshot_url, after_trade_screenshot_url')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .order('created_at', { ascending: false });
 
-      if (initialError) throw initialError;
+      if (error) throw error;
 
-      // Show first 5 trades immediately
-      const initialTrades = (initialData || []).map(transformTrade);
-      setTrades(initialTrades);
-      setLoading(false); // Stop loading spinner immediately
+      const allTrades = (data || []).map(transformTrade);
       setProgress(50);
+      setLoading(false); // Stop main loading spinner
 
-      // STEP 2: Load remaining trades in background
-      const { data: remainingData, error: remainingError } = await supabase
-        .from('trades')
-        .select('id, sno, entry, result, asset_pair, rr, strategy, created_at, trade_date, reason, tp, sl, learning, screenshot_url, after_trade_screenshot_url')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .range(5, 999);
-
-      setProgress(85);
-
-      if (remainingError) throw remainingError;
-
-      const remainingTrades = (remainingData || []).map(transformTrade);
-      const allTrades = [...initialTrades, ...remainingTrades];
+      // Progressive render - add trades in batches
+      const batchSize = 10;
+      let currentBatch = 0;
       
-      // Update cache
-      tradesCache[user.id] = { data: allTrades, timestamp: Date.now() };
-      setTrades(allTrades);
+      const renderBatch = () => {
+        const start = currentBatch * batchSize;
+        const end = Math.min(start + batchSize, allTrades.length);
+        const batch = allTrades.slice(0, end);
+        
+        setTrades(batch);
+        setLoadedCount(end);
+        
+        const progressPercent = 50 + ((end / allTrades.length) * 50);
+        setProgress(Math.min(progressPercent, 99));
+        
+        currentBatch++;
+        
+        if (end < allTrades.length) {
+          requestAnimationFrame(renderBatch);
+        } else {
+          // Update cache with all trades
+          tradesCache[user.id] = { data: allTrades, timestamp: Date.now() };
+          setProgress(100);
+          setStatus("success");
+        }
+      };
+
+      requestAnimationFrame(renderBatch);
       
-      setProgress(100);
-      setStatus("success");
     } catch (error) {
       console.error('Error loading trades:', error);
       setStatus("error");
@@ -225,6 +253,8 @@ export const useTrades = () => {
     progress,
     status,
     stats,
+    totalCount,
+    loadedCount,
     updateTrade,
     deleteTrade,
     refetch: () => loadTrades(true),

@@ -16,7 +16,7 @@ type ChartType = 'line' | 'bar' | 'pie' | 'area';
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
 const DashboardPage = () => {
-  const { trades, loading, progress, status } = useTrades();
+  const { trades, loading, progress, status, totalCount, loadedCount } = useTrades();
   const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
   const [performanceChartType, setPerformanceChartType] = useState<ChartType>('line');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('monthly');
@@ -205,6 +205,8 @@ const DashboardPage = () => {
         isVisible={progress > 0 && progress < 100} 
         status={status}
         message={status === "success" ? "Data loaded!" : status === "error" ? "Failed to load" : "Fetching your data..."}
+        totalCount={totalCount}
+        loadedCount={loadedCount}
       />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
