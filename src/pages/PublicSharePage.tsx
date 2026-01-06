@@ -89,8 +89,14 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
 
   // Progressive fade-in effect for trades
   useEffect(() => {
-    if (trades.length === 0) return;
+    if (trades.length === 0) {
+      setVisibleTrades([]);
+      return;
+    }
 
+    // Reset visible trades when trades change
+    setVisibleTrades([]);
+    
     let currentIndex = 0;
     const interval = setInterval(() => {
       if (currentIndex < trades.length) {
