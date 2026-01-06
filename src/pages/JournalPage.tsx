@@ -18,6 +18,7 @@ interface Trade {
   assetPair: string;
   rr: string;
   createdAt: string;
+  tradeDate?: string;
 }
 
 const JournalPage = () => {
@@ -43,6 +44,7 @@ const JournalPage = () => {
           rr: tradeData.rr,
           screenshot_url: tradeData.screenshot,
           after_trade_screenshot_url: tradeData.afterTradeScreenshot,
+          trade_date: tradeData.tradeDate || null,
         })
         .select()
         .single();
