@@ -50,6 +50,25 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   
   const { toast } = useToast();
 
+  // Secure availability check via Edge Function
+  const checkAvailability = async (type: 'username' | 'email' | 'phone', value: string): Promise<boolean | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-availability', {
+        body: { type, value }
+      });
+
+      if (error) {
+        console.error(`${type} check error:`, error);
+        return null;
+      }
+
+      return data?.available ?? null;
+    } catch (error) {
+      console.error(`${type} check error:`, error);
+      return null;
+    }
+  };
+
   // Real-time username availability check
   useEffect(() => {
     const checkUsername = async () => {
@@ -67,28 +86,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
       setUsernameStatus('checking');
 
-      try {
-        // Query all profiles and filter client-side for case-insensitive match
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username')
-          .not('username', 'is', null);
-
-        if (error) {
-          console.error('Username check error:', error);
-          setUsernameStatus('idle');
-          return;
-        }
-
-        // Case-insensitive comparison
-        const isTaken = data?.some(profile => 
-          profile.username?.toLowerCase() === username
-        );
-        
-        setUsernameStatus(isTaken ? 'taken' : 'available');
-      } catch (error) {
-        console.error('Username check error:', error);
+      const isAvailable = await checkAvailability('username', username);
+      
+      if (isAvailable === null) {
         setUsernameStatus('idle');
+      } else {
+        setUsernameStatus(isAvailable ? 'available' : 'taken');
       }
     };
 
@@ -108,28 +111,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
       setEmailStatus('checking');
 
-      try {
-        // Query all profiles and filter client-side for case-insensitive match
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('email')
-          .not('email', 'is', null);
-
-        if (error) {
-          console.error('Email check error:', error);
-          setEmailStatus('idle');
-          return;
-        }
-
-        // Case-insensitive comparison
-        const isTaken = data?.some(profile => 
-          profile.email?.toLowerCase() === email
-        );
-        
-        setEmailStatus(isTaken ? 'taken' : 'available');
-      } catch (error) {
-        console.error('Email check error:', error);
+      const isAvailable = await checkAvailability('email', email);
+      
+      if (isAvailable === null) {
         setEmailStatus('idle');
+      } else {
+        setEmailStatus(isAvailable ? 'available' : 'taken');
       }
     };
 
@@ -149,23 +136,12 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
       setPhoneStatus('checking');
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('phone')
-          .eq('phone', phone);
-
-        if (error) {
-          console.error('Phone check error:', error);
-          setPhoneStatus('idle');
-          return;
-        }
-
-        const isTaken = data && data.length > 0;
-        setPhoneStatus(isTaken ? 'taken' : 'available');
-      } catch (error) {
-        console.error('Phone check error:', error);
+      const isAvailable = await checkAvailability('phone', phone);
+      
+      if (isAvailable === null) {
         setPhoneStatus('idle');
+      } else {
+        setPhoneStatus(isAvailable ? 'available' : 'taken');
       }
     };
 
@@ -274,49 +250,27 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       const email = signUpData.email.trim().toLowerCase();
       const phone = signUpData.phone.trim();
 
-      // Double-check username availability before signup
-      const { data: allUsernames, error: usernameError } = await supabase
-        .from('profiles')
-        .select('username')
-        .not('username', 'is', null);
-
-      if (usernameError) {
-        console.error('Username check error:', usernameError);
-      }
-
-      const usernameExists = allUsernames?.some(p => p.username?.toLowerCase() === username);
-      if (usernameExists) {
+      // Double-check username availability before signup using Edge Function
+      const usernameAvailable = await checkAvailability('username', username);
+      if (usernameAvailable === false) {
         toast({ variant: "destructive", title: "Username already taken", description: "Please choose a different username." });
         setUsernameStatus('taken');
         setLoading(false);
         return;
       }
 
-      // Double-check email availability
-      const { data: allEmails, error: emailError } = await supabase
-        .from('profiles')
-        .select('email')
-        .not('email', 'is', null);
-
-      if (emailError) {
-        console.error('Email check error:', emailError);
-      }
-
-      const emailExists = allEmails?.some(p => p.email?.toLowerCase() === email);
-      if (emailExists) {
+      // Double-check email availability using Edge Function
+      const emailAvailable = await checkAvailability('email', email);
+      if (emailAvailable === false) {
         toast({ variant: "destructive", title: "Email already registered", description: "This email is already associated with an account." });
         setEmailStatus('taken');
         setLoading(false);
         return;
       }
 
-      // Double-check phone availability
-      const { data: existingPhones } = await supabase
-        .from('profiles')
-        .select('phone')
-        .eq('phone', phone);
-
-      if (existingPhones && existingPhones.length > 0) {
+      // Double-check phone availability using Edge Function
+      const phoneAvailable = await checkAvailability('phone', phone);
+      if (phoneAvailable === false) {
         toast({ variant: "destructive", title: "Phone number already registered", description: "This phone number is already associated with an account." });
         setPhoneStatus('taken');
         setLoading(false);
