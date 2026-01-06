@@ -43,30 +43,12 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<{ full_name: string; share_enabled: boolean } | null>(null);
   const [visibleTrades, setVisibleTrades] = useState<Trade[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch profile to check if sharing is enabled
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name, share_enabled')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
-        
-        if (!profileData || !profileData.share_enabled) {
-          setError("This profile is not publicly shared.");
-          setLoading(false);
-          return;
-        }
-
-        setProfile(profileData);
-
-        // Fetch trades
+        // Fetch trades directly - RLS policy handles share_enabled check
         const { data: tradesData, error: tradesError } = await supabase
           .from('trades')
           .select('id, sno, entry, result, asset_pair, rr, strategy, trade_date, created_at')
@@ -75,7 +57,14 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
 
         if (tradesError) throw tradesError;
 
-        setTrades(tradesData || []);
+        // If no trades returned, either user has no trades or sharing is disabled
+        if (!tradesData || tradesData.length === 0) {
+          setError("This profile is not publicly shared or has no trades.");
+          setLoading(false);
+          return;
+        }
+
+        setTrades(tradesData);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -195,7 +184,7 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
         {/* Header */}
         <div className="text-center py-6">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            {profile?.full_name || 'Trader'}'s Trading Performance
+            Trading Performance
           </h1>
           <p className="text-muted-foreground mt-2">
             Public trading journal statistics
