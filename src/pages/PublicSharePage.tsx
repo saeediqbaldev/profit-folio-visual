@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -9,7 +10,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, Minus, BarChart3, Target, Trophy, XCircle, Activity } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  BarChart3,
+  Target,
+  Trophy,
+  XCircle,
+  Activity,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import CandleLoader from "@/components/ui/candle-loader";
 import { format } from "date-fns";
@@ -22,131 +39,147 @@ interface Trade {
   id: string;
   sno: number;
   entry: string;
-  result: string;
-  asset_pair: string;
-  rr: string;
-  strategy: string;
-  trade_date: string;
+  result: string | null;
+  asset_pair: string | null;
+  rr: string | null;
+  strategy: string | null;
+  trade_date: string | null;
   created_at: string;
 }
 
-interface Stats {
+type StrategyStatsMap = Record<string, { total: number; wins: number; winRate: number }>;
+
+interface OverallStats {
   total: number;
   wins: number;
   losses: number;
   breakeven: number;
   winRate: number;
-  strategyStats: { [key: string]: { total: number; wins: number; winRate: number } };
 }
 
 const PublicSharePage = ({ userId }: PublicSharePageProps) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visibleTrades, setVisibleTrades] = useState<Trade[]>([]);
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        setSelectedStrategy("all");
+
         // Fetch trades directly - RLS policy handles share_enabled check
         const { data: tradesData, error: tradesError } = await supabase
-          .from('trades')
-          .select('id, sno, entry, result, asset_pair, rr, strategy, trade_date, created_at')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+          .from("trades")
+          .select("id, sno, entry, result, asset_pair, rr, strategy, trade_date, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
 
         if (tradesError) throw tradesError;
 
         // If no trades returned, either user has no trades or sharing is disabled
         if (!tradesData || tradesData.length === 0) {
-          setError("This profile is not publicly shared or has no trades.");
-          setLoading(false);
+          if (!cancelled) {
+            setTrades([]);
+            setError("This profile is not publicly shared or has no trades.");
+            setLoading(false);
+          }
           return;
         }
 
-        setTrades(tradesData);
-        setLoading(false);
+        if (!cancelled) {
+          setTrades(tradesData as Trade[]);
+          setLoading(false);
+        }
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError("Failed to load trading data.");
-        setLoading(false);
+        console.error("Error fetching data:", err);
+        if (!cancelled) {
+          setError("Failed to load trading data.");
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
-  // Progressive fade-in effect for trades
-  useEffect(() => {
-    if (trades.length === 0) {
-      setVisibleTrades([]);
-      return;
+  const availableStrategies = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of trades) {
+      const s = (t.strategy ?? "").trim();
+      if (s) set.add(s);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [trades]);
+
+  const filteredTrades = useMemo(() => {
+    if (selectedStrategy === "all") return trades;
+    return trades.filter((t) => (t.strategy ?? "").trim() === selectedStrategy);
+  }, [trades, selectedStrategy]);
+
+  const stats: OverallStats = useMemo(() => {
+    const wins = filteredTrades.filter((t) => t.result?.toUpperCase() === "WIN").length;
+    const losses = filteredTrades.filter((t) => t.result?.toUpperCase() === "LOSS").length;
+    const breakeven = filteredTrades.filter((t) =>
+      ["BE", "BREAKEVEN"].includes(t.result?.toUpperCase() ?? ""),
+    ).length;
+    const total = filteredTrades.length;
+    const denom = wins + losses;
+    const winRate = denom > 0 ? (wins / denom) * 100 : 0;
+
+    return { total, wins, losses, breakeven, winRate };
+  }, [filteredTrades]);
+
+  const strategyStats: StrategyStatsMap = useMemo(() => {
+    const map: StrategyStatsMap = {};
+
+    for (const trade of trades) {
+      const strategy = (trade.strategy ?? "Unknown").trim() || "Unknown";
+      if (!map[strategy]) {
+        map[strategy] = { total: 0, wins: 0, winRate: 0 };
+      }
+
+      map[strategy].total++;
+      if (trade.result?.toUpperCase() === "WIN") {
+        map[strategy].wins++;
+      }
     }
 
-    // Reset visible trades when trades change
-    setVisibleTrades([]);
-    
-    let currentIndex = 0;
-    const interval = setInterval(() => {
-      if (currentIndex < trades.length) {
-        setVisibleTrades(prev => [...prev, trades[currentIndex]]);
-        currentIndex++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [trades]);
-
-  // Calculate stats
-  const stats: Stats = useMemo(() => {
-    const wins = trades.filter(t => t.result?.toUpperCase() === 'WIN').length;
-    const losses = trades.filter(t => t.result?.toUpperCase() === 'LOSS').length;
-    const breakeven = trades.filter(t => ['BE', 'BREAKEVEN'].includes(t.result?.toUpperCase())).length;
-    const total = trades.length;
-    const winRate = total > 0 ? (wins / (wins + losses)) * 100 : 0;
-
-    // Strategy stats
-    const strategyStats: { [key: string]: { total: number; wins: number; winRate: number } } = {};
-    trades.forEach(trade => {
-      const strategy = trade.strategy || 'Unknown';
-      if (!strategyStats[strategy]) {
-        strategyStats[strategy] = { total: 0, wins: 0, winRate: 0 };
-      }
-      strategyStats[strategy].total++;
-      if (trade.result?.toUpperCase() === 'WIN') {
-        strategyStats[strategy].wins++;
-      }
-    });
-
-    Object.keys(strategyStats).forEach(key => {
-      const s = strategyStats[key];
+    for (const key of Object.keys(map)) {
+      const s = map[key];
       s.winRate = s.total > 0 ? (s.wins / s.total) * 100 : 0;
-    });
+    }
 
-    return { total, wins, losses, breakeven, winRate, strategyStats };
+    return map;
   }, [trades]);
 
-  const getResultBadge = (result: string) => {
+  const getResultBadge = (result: string | null) => {
     switch (result?.toUpperCase()) {
-      case 'WIN':
+      case "WIN":
         return <Badge className="bg-success/10 text-success border-success/20">WIN</Badge>;
-      case 'LOSS':
+      case "LOSS":
         return <Badge className="bg-danger/10 text-danger border-danger/20">LOSS</Badge>;
-      case 'BE':
-      case 'BREAKEVEN':
+      case "BE":
+      case "BREAKEVEN":
         return <Badge variant="secondary">BE</Badge>;
       default:
-        return <Badge variant="outline">{result || 'N/A'}</Badge>;
+        return <Badge variant="outline">{result || "N/A"}</Badge>;
     }
   };
 
-  const getResultIcon = (result: string) => {
+  const getResultIcon = (result: string | null) => {
     switch (result?.toUpperCase()) {
-      case 'WIN':
+      case "WIN":
         return <TrendingUp className="h-4 w-4 text-success" />;
-      case 'LOSS':
+      case "LOSS":
         return <TrendingDown className="h-4 w-4 text-danger" />;
       default:
         return <Minus className="h-4 w-4 text-muted-foreground" />;
@@ -186,9 +219,25 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
             Trading Performance
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Public trading journal statistics
-          </p>
+          <p className="text-muted-foreground mt-2">Public trading journal statistics</p>
+
+          <div className="mt-4 flex justify-center">
+            <div className="w-full max-w-xs text-left">
+              <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by strategy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All strategies</SelectItem>
+                  {availableStrategies.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -253,7 +302,7 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
         </div>
 
         {/* Strategy Win Rates */}
-        {Object.keys(stats.strategyStats).length > 0 && (
+        {Object.keys(strategyStats).length > 0 && (
           <Card className="shadow-card border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -263,12 +312,22 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {Object.entries(stats.strategyStats).map(([strategy, data]) => (
-                  <div key={strategy} className="p-4 rounded-lg bg-muted/50 border border-border/50">
+                {(Object.entries(strategyStats) as Array<[
+                  string,
+                  { total: number; wins: number; winRate: number }
+                ]>).map(([strategy, data]) => (
+                  <div
+                    key={strategy}
+                    className="p-4 rounded-lg bg-muted/50 border border-border/50"
+                  >
                     <h4 className="font-medium truncate">{strategy}</h4>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">{data.total} trades</span>
-                      <span className={`font-bold ${data.winRate >= 50 ? 'text-success' : 'text-danger'}`}>
+                      <span className="text-sm text-muted-foreground">
+                        {data.total} trades
+                      </span>
+                      <span
+                        className={`font-bold ${data.winRate >= 50 ? "text-success" : "text-danger"}`}
+                      >
                         {data.winRate.toFixed(1)}%
                       </span>
                     </div>
@@ -282,51 +341,65 @@ const PublicSharePage = ({ userId }: PublicSharePageProps) => {
         {/* Trades Table */}
         <Card className="shadow-card border-border/50">
           <CardHeader>
-            <CardTitle>Trade History ({trades.length} trades)</CardTitle>
+            <CardTitle>
+              Trade History ({filteredTrades.length} trades)
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60px]">#</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Strategy</TableHead>
-                    <TableHead>Entry</TableHead>
-                    <TableHead>R:R</TableHead>
-                    <TableHead>Result</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleTrades.map((trade, index) => (
-                    <TableRow 
-                      key={trade.id}
-                      className="animate-fade-in"
-                      style={{ animationDelay: `${index * 30}ms` }}
-                    >
-                      <TableCell className="font-medium">{trade.sno}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {trade.trade_date 
-                          ? format(new Date(trade.trade_date), 'MMM dd, yyyy')
-                          : format(new Date(trade.created_at), 'MMM dd, yyyy')
-                        }
-                      </TableCell>
-                      <TableCell className="font-medium">{trade.asset_pair || '-'}</TableCell>
-                      <TableCell>{trade.strategy || '-'}</TableCell>
-                      <TableCell>{trade.entry}</TableCell>
-                      <TableCell>{trade.rr || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getResultIcon(trade.result)}
-                          {getResultBadge(trade.result)}
-                        </div>
-                      </TableCell>
+            {filteredTrades.length === 0 ? (
+              <Alert>
+                <AlertTitle>No trades</AlertTitle>
+                <AlertDescription>
+                  No trades match the selected strategy.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[60px]">#</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Asset</TableHead>
+                      <TableHead>Strategy</TableHead>
+                      <TableHead>Entry</TableHead>
+                      <TableHead>R:R</TableHead>
+                      <TableHead>Result</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTrades.map((trade, index) => (
+                      <TableRow
+                        key={trade.id}
+                        className="animate-fade-in"
+                        style={{ animationDelay: `${index * 30}ms` }}
+                      >
+                        <TableCell className="font-medium">
+                          {trade.sno}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {trade.trade_date
+                            ? format(new Date(trade.trade_date), "MMM dd, yyyy")
+                            : format(new Date(trade.created_at), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {trade.asset_pair || "-"}
+                        </TableCell>
+                        <TableCell>{trade.strategy || "-"}</TableCell>
+                        <TableCell>{trade.entry}</TableCell>
+                        <TableCell>{trade.rr || "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getResultIcon(trade.result)}
+                            {getResultBadge(trade.result)}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
