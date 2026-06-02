@@ -127,7 +127,7 @@ const AdvancedCharts = memo(({ trades }: AdvancedChartsProps) => {
 
   const renderChart = useCallback(() => {
     const commonProps = {
-      width: '100%',
+      width: "100%" as const,
       height: 400,
       data: timeSeriesData,
     };
