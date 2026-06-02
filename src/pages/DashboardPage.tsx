@@ -133,7 +133,7 @@ const DashboardPage = () => {
   // Render performance chart based on type
   const renderPerformanceChart = () => {
     const height = 350 * chartZoom.performance;
-    const commonProps = { width: '100%', height, data: timeSeriesData };
+    const commonProps = { width: "100%" as const, height, data: timeSeriesData };
 
     switch (performanceChartType) {
       case 'line':
