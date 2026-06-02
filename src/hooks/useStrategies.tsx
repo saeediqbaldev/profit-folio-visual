@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
-// Default strategies for new users
 const DEFAULT_STRATEGIES = ["Strategy 1", "Strategy 2", "Strategy 3"];
 const MAX_STRATEGIES = 5;
 
@@ -19,30 +18,15 @@ export const useStrategies = () => {
       setLoading(false);
       return;
     }
-
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('strategies')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error loading strategies:', error);
-        setStrategies(DEFAULT_STRATEGIES);
-      } else if (data?.strategies && data.strategies.length > 0) {
+      const data = await api.get<{ strategies: string[] }>("/api/strategies");
+      if (data?.strategies && data.strategies.length > 0) {
         setStrategies(data.strategies);
       } else {
-        // Set default strategies for new users
         setStrategies(DEFAULT_STRATEGIES);
-        // Save default strategies to profile
-        await supabase
-          .from('profiles')
-          .update({ strategies: DEFAULT_STRATEGIES })
-          .eq('user_id', user.id);
       }
     } catch (error) {
-      console.error('Error loading strategies:', error);
+      console.error("Error loading strategies:", error);
       setStrategies(DEFAULT_STRATEGIES);
     } finally {
       setLoading(false);
@@ -53,135 +37,76 @@ export const useStrategies = () => {
     loadStrategies();
   }, [loadStrategies]);
 
-  const addStrategy = useCallback(async (strategy: string) => {
-    if (!user) return false;
-    
-    const trimmedStrategy = strategy.trim();
-    if (!trimmedStrategy) {
-      toast({
-        variant: "destructive",
-        title: "Invalid strategy",
-        description: "Strategy name cannot be empty.",
-      });
-      return false;
-    }
+  const persist = async (newStrategies: string[]) => {
+    await api.put("/api/strategies", { strategies: newStrategies });
+  };
 
-    if (strategies.includes(trimmedStrategy)) {
-      toast({
-        variant: "destructive",
-        title: "Duplicate strategy",
-        description: "This strategy already exists.",
-      });
-      return false;
-    }
+  const addStrategy = useCallback(
+    async (strategy: string) => {
+      const trimmed = strategy.trim();
+      if (!trimmed) {
+        toast({ variant: "destructive", title: "Invalid strategy", description: "Name cannot be empty." });
+        return false;
+      }
+      if (strategies.includes(trimmed)) {
+        toast({ variant: "destructive", title: "Duplicate strategy", description: "Already exists." });
+        return false;
+      }
+      if (strategies.length >= MAX_STRATEGIES) {
+        toast({ variant: "destructive", title: "Maximum reached", description: `Up to ${MAX_STRATEGIES}.` });
+        return false;
+      }
+      const next = [...strategies, trimmed];
+      try {
+        await persist(next);
+        setStrategies(next);
+        toast({ title: "Strategy added", description: `"${trimmed}" added.` });
+        return true;
+      } catch {
+        toast({ variant: "destructive", title: "Error", description: "Failed to add strategy." });
+        return false;
+      }
+    },
+    [strategies, toast]
+  );
 
-    if (strategies.length >= MAX_STRATEGIES) {
-      toast({
-        variant: "destructive",
-        title: "Maximum reached",
-        description: `You can only have up to ${MAX_STRATEGIES} strategies.`,
-      });
-      return false;
-    }
+  const removeStrategy = useCallback(
+    async (strategy: string) => {
+      if (strategies.length <= 1) {
+        toast({ variant: "destructive", title: "Cannot remove", description: "Keep at least one." });
+        return false;
+      }
+      const next = strategies.filter((s) => s !== strategy);
+      try {
+        await persist(next);
+        setStrategies(next);
+        toast({ title: "Strategy removed" });
+        return true;
+      } catch {
+        toast({ variant: "destructive", title: "Error", description: "Failed to remove." });
+        return false;
+      }
+    },
+    [strategies, toast]
+  );
 
-    const newStrategies = [...strategies, trimmedStrategy];
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ strategies: newStrategies })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setStrategies(newStrategies);
-      toast({
-        title: "Strategy added",
-        description: `"${trimmedStrategy}" has been added to your strategies.`,
-      });
-      return true;
-    } catch (error) {
-      console.error('Error adding strategy:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to add strategy.",
-      });
-      return false;
-    }
-  }, [user, strategies, toast]);
-
-  const removeStrategy = useCallback(async (strategy: string) => {
-    if (!user) return false;
-
-    if (strategies.length <= 1) {
-      toast({
-        variant: "destructive",
-        title: "Cannot remove",
-        description: "You must have at least one strategy.",
-      });
-      return false;
-    }
-
-    const newStrategies = strategies.filter(s => s !== strategy);
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ strategies: newStrategies })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setStrategies(newStrategies);
-      toast({
-        title: "Strategy removed",
-        description: `"${strategy}" has been removed.`,
-      });
-      return true;
-    } catch (error) {
-      console.error('Error removing strategy:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to remove strategy.",
-      });
-      return false;
-    }
-  }, [user, strategies, toast]);
-
-  const updateStrategies = useCallback(async (newStrategies: string[]) => {
-    if (!user) return false;
-
-    if (newStrategies.length > MAX_STRATEGIES) {
-      toast({
-        variant: "destructive",
-        title: "Too many strategies",
-        description: `Maximum ${MAX_STRATEGIES} strategies allowed.`,
-      });
-      return false;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ strategies: newStrategies })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setStrategies(newStrategies);
-      return true;
-    } catch (error) {
-      console.error('Error updating strategies:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update strategies.",
-      });
-      return false;
-    }
-  }, [user, toast]);
+  const updateStrategies = useCallback(
+    async (newStrategies: string[]) => {
+      if (newStrategies.length > MAX_STRATEGIES) {
+        toast({ variant: "destructive", title: "Too many", description: `Max ${MAX_STRATEGIES}.` });
+        return false;
+      }
+      try {
+        await persist(newStrategies);
+        setStrategies(newStrategies);
+        return true;
+      } catch {
+        toast({ variant: "destructive", title: "Error", description: "Failed to update." });
+        return false;
+      }
+    },
+    [toast]
+  );
 
   return {
     strategies,

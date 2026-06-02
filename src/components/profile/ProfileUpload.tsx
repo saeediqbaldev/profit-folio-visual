@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 interface ProfileUploadProps {
   avatarUrl: string | null;
@@ -19,66 +19,20 @@ const ProfileUpload = ({ avatarUrl, fullName, email, onUploadComplete }: Profile
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
-      
       if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select an image to upload.');
+        throw new Error("You must select an image to upload.");
       }
-
       const file = event.target.files[0];
-      
-      // Security: File validation
-      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-      const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-      const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
+      const MAX = 5 * 1024 * 1024;
+      const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      if (!ALLOWED.includes(file.type)) throw new Error("Invalid file type.");
+      if (file.size > MAX) throw new Error("Image must be smaller than 5MB.");
 
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        throw new Error('Invalid file type. Please upload a PNG, JPG, or WEBP image.');
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        throw new Error('File too large. Image must be smaller than 5MB.');
-      }
-
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
-      if (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
-        throw new Error('Invalid file extension. Allowed: png, jpg, jpeg, webp');
-      }
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          upsert: true
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      onUploadComplete(data.publicUrl);
-      
-      toast({
-        title: "Profile picture updated",
-        description: "Your profile picture has been successfully updated.",
-      });
+      const { url } = await api.upload(file);
+      onUploadComplete(url);
+      toast({ title: "Profile picture updated" });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Upload failed",
-        description: error.message || "Failed to upload profile picture.",
-      });
+      toast({ variant: "destructive", title: "Upload failed", description: error.message });
     } finally {
       setUploading(false);
     }
@@ -89,34 +43,20 @@ const ProfileUpload = ({ avatarUrl, fullName, email, onUploadComplete }: Profile
       <Avatar className="w-24 h-24">
         <AvatarImage src={avatarUrl || ""} />
         <AvatarFallback className="text-lg">
-          {fullName ? fullName.charAt(0).toUpperCase() : 
-           email ? email.charAt(0).toUpperCase() : 'U'}
+          {fullName ? fullName.charAt(0).toUpperCase() : email ? email.charAt(0).toUpperCase() : "U"}
         </AvatarFallback>
       </Avatar>
-      
       <label htmlFor="avatar-upload">
-        <Button 
-          variant="outline" 
-          className="w-full cursor-pointer"
-          disabled={uploading}
-          asChild
-        >
+        <Button variant="outline" className="w-full cursor-pointer" disabled={uploading} asChild>
           <span>
             {uploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Uploading...
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
             ) : (
-              <>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Photo
-              </>
+              <><Upload className="h-4 w-4 mr-2" />Upload Photo</>
             )}
           </span>
         </Button>
       </label>
-      
       <input
         id="avatar-upload"
         type="file"
@@ -124,10 +64,7 @@ const ProfileUpload = ({ avatarUrl, fullName, email, onUploadComplete }: Profile
         onChange={handleFileUpload}
         className="hidden"
       />
-      
-      <p className="text-xs text-muted-foreground text-center">
-        Upload a profile picture (PNG, JPG, WEBP - Max 5MB)
-      </p>
+      <p className="text-xs text-muted-foreground text-center">PNG, JPG, WEBP - Max 5MB</p>
     </div>
   );
 };

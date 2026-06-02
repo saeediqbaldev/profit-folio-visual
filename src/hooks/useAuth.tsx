@@ -1,44 +1,59 @@
-import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from "react";
+
+// Hardcoded single admin user. Auth is checked only on the frontend.
+const ADMIN_USERNAME = "Saeeddev";
+const ADMIN_PASSWORD = "Saeed@@2026&&";
+const STORAGE_KEY = "tj-admin-auth";
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
+const ADMIN_USER: User = {
+  id: "admin",
+  username: ADMIN_USERNAME,
+  email: "admin@local",
+};
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === "1") setUser(ADMIN_USER);
+    } catch {
+      /* ignore */
+    }
+    setLoading(false);
   }, []);
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error signing out:', error);
-    }
-  };
+  const signIn = useCallback(
+    async (username: string, password: string): Promise<boolean> => {
+      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        localStorage.setItem(STORAGE_KEY, "1");
+        setUser(ADMIN_USER);
+        return true;
+      }
+      return false;
+    },
+    []
+  );
+
+  const signOut = useCallback(async () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setUser(null);
+  }, []);
 
   return {
     user,
-    session,
+    session: user ? { user } : null,
     loading,
+    signIn,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 };

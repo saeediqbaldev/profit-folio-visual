@@ -1,7 +1,5 @@
-import { useState } from "react";
 import TradeForm from "@/components/journal/TradeForm";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface Trade {
@@ -22,56 +20,30 @@ interface Trade {
 }
 
 const JournalPage = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
 
-  const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt'>) => {
-    if (!user) return;
-
+  const handleAddTrade = async (tradeData: Omit<Trade, "id" | "createdAt">) => {
     try {
-      const { data, error } = await supabase
-        .from('trades')
-        .insert({
-          user_id: user.id,
-          strategy: tradeData.strategy,
-          entry: tradeData.entry,
-          reason: tradeData.reason,
-          tp: tradeData.tp,
-          sl: tradeData.sl,
-          result: tradeData.result,
-          learning: tradeData.learning,
-          asset_pair: tradeData.assetPair,
-          rr: tradeData.rr,
-          screenshot_url: tradeData.screenshot,
-          after_trade_screenshot_url: tradeData.afterTradeScreenshot,
-          trade_date: tradeData.tradeDate || null,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding trade:', error);
-        toast({
-          variant: "destructive",
-          title: "Error adding trade",
-          description: "Failed to save the trade to the database.",
-        });
-      } else {
-        toast({
-          title: "Trade added",
-          description: "Your trade has been successfully saved.",
-        });
-      }
-    } catch (error) {
-      console.error('Error adding trade:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred while saving the trade.",
+      await api.post("/api/trades", {
+        strategy: tradeData.strategy,
+        entry: tradeData.entry,
+        reason: tradeData.reason,
+        tp: tradeData.tp,
+        sl: tradeData.sl,
+        result: tradeData.result,
+        learning: tradeData.learning,
+        asset_pair: tradeData.assetPair,
+        rr: tradeData.rr,
+        screenshot_url: tradeData.screenshot,
+        after_trade_screenshot_url: tradeData.afterTradeScreenshot,
+        trade_date: tradeData.tradeDate || null,
       });
+      toast({ title: "Trade added", description: "Successfully saved." });
+    } catch (error) {
+      console.error("Error adding trade:", error);
+      toast({ variant: "destructive", title: "Error adding trade", description: "Failed to save." });
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
@@ -84,7 +56,6 @@ const JournalPage = () => {
             Record and analyze your trading decisions
           </p>
         </div>
-
         <TradeForm onAddTrade={handleAddTrade} />
       </div>
     </div>

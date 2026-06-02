@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -21,9 +21,27 @@ export interface Trade {
   tradeDate?: string;
 }
 
-// Cache for trades data
-const tradesCache: { [userId: string]: { data: Trade[]; timestamp: number } } = {};
-const CACHE_DURATION = 60000; // 1 minute cache
+const tradesCache: { data: Trade[]; timestamp: number } | null = null;
+let cacheRef: { data: Trade[]; timestamp: number } | null = tradesCache;
+const CACHE_DURATION = 60000;
+
+const transformTrade = (trade: any): Trade => ({
+  id: trade.id,
+  sno: trade.sno,
+  entry: trade.entry,
+  reason: trade.reason || "",
+  tp: trade.tp || "",
+  sl: trade.sl || "",
+  result: trade.result || "",
+  learning: trade.learning || "",
+  screenshot: trade.screenshot_url,
+  afterTradeScreenshot: trade.after_trade_screenshot_url,
+  assetPair: trade.asset_pair || "",
+  rr: trade.rr || "",
+  strategy: trade.strategy || "",
+  createdAt: trade.created_at,
+  tradeDate: trade.trade_date || trade.created_at,
+});
 
 export const useTrades = () => {
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -36,142 +54,94 @@ export const useTrades = () => {
   const { toast } = useToast();
   const loadingRef = useRef(false);
 
-  // Transform database row to Trade object
-  const transformTrade = (trade: any): Trade => ({
-    id: trade.id,
-    sno: trade.sno,
-    entry: trade.entry,
-    reason: trade.reason || '',
-    tp: trade.tp || '',
-    sl: trade.sl || '',
-    result: trade.result || '',
-    learning: trade.learning || '',
-    screenshot: trade.screenshot_url,
-    afterTradeScreenshot: trade.after_trade_screenshot_url,
-    assetPair: trade.asset_pair || '',
-    rr: trade.rr || '',
-    strategy: trade.strategy || '',
-    createdAt: trade.created_at,
-    tradeDate: trade.trade_date || trade.created_at,
-  });
-
-  // Load trades with progressive loading
-  const loadTrades = useCallback(async (forceRefresh = false) => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    // Prevent duplicate calls
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-
-    // Check cache first
-    const cached = tradesCache[user.id];
-    if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      setTrades(cached.data);
-      setLoading(false);
-      loadingRef.current = false;
-      return;
-    }
-
-    setProgress(5);
-    setStatus("loading");
-    setTrades([]); // Clear for fresh progressive load
-    
-    try {
-      // Get total count first
-      const { count, error: countError } = await supabase
-        .from('trades')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      if (countError) throw countError;
-
-      const total = count || 0;
-      setTotalCount(total);
-      setLoadedCount(0);
-      setProgress(10);
-
-      if (total === 0) {
+  const loadTrades = useCallback(
+    async (forceRefresh = false) => {
+      if (!user) {
         setLoading(false);
-        setProgress(100);
-        setStatus("success");
+        return;
+      }
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+
+      if (!forceRefresh && cacheRef && Date.now() - cacheRef.timestamp < CACHE_DURATION) {
+        setTrades(cacheRef.data);
+        setTotalCount(cacheRef.data.length);
+        setLoadedCount(cacheRef.data.length);
+        setLoading(false);
         loadingRef.current = false;
         return;
       }
 
-      // Load all trades at once but display progressively
-      const { data, error } = await supabase
-        .from('trades')
-        .select('id, sno, entry, result, asset_pair, rr, strategy, created_at, trade_date, reason, tp, sl, learning, screenshot_url, after_trade_screenshot_url')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      setProgress(5);
+      setStatus("loading");
+      setTrades([]);
 
-      if (error) throw error;
+      try {
+        const data = await api.get<any[]>("/api/trades");
+        const allTrades = (data || []).map(transformTrade);
+        const total = allTrades.length;
+        setTotalCount(total);
+        setLoadedCount(0);
+        setProgress(50);
+        setLoading(false);
 
-      const allTrades = (data || []).map(transformTrade);
-      setProgress(50);
-      setLoading(false); // Stop main loading spinner
-
-      // Progressive render - add trades in batches
-      const batchSize = 10;
-      let currentBatch = 0;
-      
-      const renderBatch = () => {
-        const start = currentBatch * batchSize;
-        const end = Math.min(start + batchSize, allTrades.length);
-        const batch = allTrades.slice(0, end);
-        
-        setTrades(batch);
-        setLoadedCount(end);
-        
-        const progressPercent = 50 + ((end / allTrades.length) * 50);
-        setProgress(Math.min(progressPercent, 99));
-        
-        currentBatch++;
-        
-        if (end < allTrades.length) {
-          requestAnimationFrame(renderBatch);
-        } else {
-          // Update cache with all trades
-          tradesCache[user.id] = { data: allTrades, timestamp: Date.now() };
+        if (total === 0) {
+          cacheRef = { data: [], timestamp: Date.now() };
           setProgress(100);
           setStatus("success");
+          loadingRef.current = false;
+          return;
         }
-      };
 
-      requestAnimationFrame(renderBatch);
-      
-    } catch (error) {
-      console.error('Error loading trades:', error);
-      setStatus("error");
-      toast({
-        variant: "destructive",
-        title: "Error loading trades",
-        description: "Failed to load your trades.",
-      });
-    } finally {
-      loadingRef.current = false;
-      setTimeout(() => setProgress(0), 1500);
-    }
-  }, [user, toast]);
+        const batchSize = 10;
+        let currentBatch = 0;
+        const renderBatch = () => {
+          const start = currentBatch * batchSize;
+          const end = Math.min(start + batchSize, allTrades.length);
+          const batch = allTrades.slice(0, end);
+          setTrades(batch);
+          setLoadedCount(end);
+          setProgress(Math.min(50 + (end / allTrades.length) * 50, 99));
+          currentBatch++;
+          if (end < allTrades.length) {
+            requestAnimationFrame(renderBatch);
+          } else {
+            cacheRef = { data: allTrades, timestamp: Date.now() };
+            setProgress(100);
+            setStatus("success");
+          }
+        };
+        requestAnimationFrame(renderBatch);
+      } catch (error) {
+        console.error("Error loading trades:", error);
+        setStatus("error");
+        toast({
+          variant: "destructive",
+          title: "Error loading trades",
+          description: "Failed to load your trades.",
+        });
+      } finally {
+        loadingRef.current = false;
+        setTimeout(() => setProgress(0), 1500);
+      }
+    },
+    [user, toast]
+  );
 
   useEffect(() => {
     loadTrades();
   }, [loadTrades]);
 
-  const updateTrade = useCallback(async (updatedTrade: Trade, onProgress?: (p: number, s?: "loading" | "success" | "error") => void) => {
-    if (!user) return;
-
-    onProgress?.(10, "loading");
-    
-    try {
-      onProgress?.(40, "loading");
-      
-      const { error } = await supabase
-        .from('trades')
-        .update({
+  const updateTrade = useCallback(
+    async (
+      updatedTrade: Trade,
+      onProgress?: (p: number, s?: "loading" | "success" | "error") => void
+    ) => {
+      if (!user) return;
+      onProgress?.(10, "loading");
+      try {
+        onProgress?.(40, "loading");
+        await api.put(`/api/trades/${updatedTrade.id}`, {
           entry: updatedTrade.entry,
           reason: updatedTrade.reason,
           tp: updatedTrade.tp,
@@ -180,70 +150,56 @@ export const useTrades = () => {
           learning: updatedTrade.learning,
           asset_pair: updatedTrade.assetPair,
           rr: updatedTrade.rr,
+          strategy: updatedTrade.strategy,
           screenshot_url: updatedTrade.screenshot,
           after_trade_screenshot_url: updatedTrade.afterTradeScreenshot,
-        })
-        .eq('id', updatedTrade.id)
-        .eq('user_id', user.id);
-
-      onProgress?.(80, "loading");
-
-      if (error) throw error;
-
-      setTrades(prev => prev.map(trade => 
-        trade.id === updatedTrade.id ? updatedTrade : trade
-      ));
-      
-      // Update cache
-      if (tradesCache[user.id]) {
-        tradesCache[user.id].data = tradesCache[user.id].data.map(trade => 
-          trade.id === updatedTrade.id ? updatedTrade : trade
+        });
+        onProgress?.(80, "loading");
+        setTrades((prev) =>
+          prev.map((t) => (t.id === updatedTrade.id ? updatedTrade : t))
         );
+        if (cacheRef) {
+          cacheRef.data = cacheRef.data.map((t) =>
+            t.id === updatedTrade.id ? updatedTrade : t
+          );
+        }
+        onProgress?.(100, "success");
+        toast({ title: "Trade updated successfully" });
+      } catch (error) {
+        console.error("Error updating trade:", error);
+        onProgress?.(100, "error");
+        toast({ variant: "destructive", title: "Error updating trade" });
       }
-      
-      onProgress?.(100, "success");
-      toast({ title: "Trade updated successfully" });
-    } catch (error) {
-      console.error('Error updating trade:', error);
-      onProgress?.(100, "error");
-      toast({ variant: "destructive", title: "Error updating trade" });
-    }
-  }, [user, toast]);
+    },
+    [user, toast]
+  );
 
-  const deleteTrade = useCallback(async (id: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('trades')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setTrades(prev => prev.filter(trade => trade.id !== id));
-      
-      // Update cache
-      if (tradesCache[user.id]) {
-        tradesCache[user.id].data = tradesCache[user.id].data.filter(trade => trade.id !== id);
+  const deleteTrade = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      try {
+        await api.del(`/api/trades/${id}`);
+        setTrades((prev) => prev.filter((t) => t.id !== id));
+        if (cacheRef) {
+          cacheRef.data = cacheRef.data.filter((t) => t.id !== id);
+        }
+        toast({ title: "Trade deleted" });
+      } catch (error) {
+        console.error("Error deleting trade:", error);
+        toast({ variant: "destructive", title: "Error deleting trade" });
       }
-      
-      toast({ title: "Trade deleted" });
-    } catch (error) {
-      console.error('Error deleting trade:', error);
-      toast({ variant: "destructive", title: "Error deleting trade" });
-    }
-  }, [user, toast]);
+    },
+    [user, toast]
+  );
 
-  // Computed stats - memoized for performance
   const stats = useMemo(() => {
-    const wins = trades.filter(t => t.result?.toLowerCase() === 'win').length;
-    const losses = trades.filter(t => t.result?.toLowerCase() === 'loss').length;
-    const breakeven = trades.filter(t => t.result?.toLowerCase() === 'breakeven' || t.result?.toLowerCase() === 'be').length;
+    const wins = trades.filter((t) => t.result?.toLowerCase() === "win").length;
+    const losses = trades.filter((t) => t.result?.toLowerCase() === "loss").length;
+    const breakeven = trades.filter(
+      (t) => t.result?.toLowerCase() === "breakeven" || t.result?.toLowerCase() === "be"
+    ).length;
     const total = trades.length;
-    const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0';
-
+    const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0";
     return { wins, losses, breakeven, total, winRate };
   }, [trades]);
 
@@ -261,11 +217,6 @@ export const useTrades = () => {
   };
 };
 
-// Clear cache utility
-export const clearTradesCache = (userId?: string) => {
-  if (userId) {
-    delete tradesCache[userId];
-  } else {
-    Object.keys(tradesCache).forEach(key => delete tradesCache[key]);
-  }
+export const clearTradesCache = () => {
+  cacheRef = null;
 };
