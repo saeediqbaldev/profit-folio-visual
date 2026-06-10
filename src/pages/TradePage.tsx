@@ -202,11 +202,13 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
             {([
               ["assetPair", "Asset Pair"],
               ["strategy", "Strategy"],
+              ["session", "Session"],
               ["entry", "Entry"],
               ["tp", "Take Profit"],
               ["sl", "Stop Loss"],
               ["rr", "Risk Reward R/R"],
             ] as Array<[keyof Trade, string]>).map(([key, label]) => (
+
               <div className="space-y-2" key={key as string}>
                 <Label htmlFor={key as string}>{label}</Label>
                 <Input
