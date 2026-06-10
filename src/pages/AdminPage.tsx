@@ -10,7 +10,6 @@ import ActivityLogs from "@/components/profile/ActivityLogs";
 
 interface AdminStats {
   totalTrades: number;
-  totalPsxTrades: number;
   storageUsed: string;
 }
 
@@ -18,7 +17,8 @@ const AdminPage = () => {
   const { toast } = useToast();
   const { isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<AdminStats>({ totalTrades: 0, totalPsxTrades: 0, storageUsed: "0 MB" });
+  const [stats, setStats] = useState<AdminStats>({ totalTrades: 0, storageUsed: "0 MB" });
+
 
   useEffect(() => { loadAdminData(); /* eslint-disable-next-line */ }, []);
 
@@ -61,7 +61,7 @@ const AdminPage = () => {
           <p className="text-muted-foreground mt-2">Monitor system health and usage</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="shadow-card border-border/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Forex Trades</CardTitle>
@@ -69,16 +69,6 @@ const AdminPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{stats.totalTrades}</div>
-              <p className="text-xs text-muted-foreground">Records in database</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">PSX Trades</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{stats.totalPsxTrades}</div>
               <p className="text-xs text-muted-foreground">Records in database</p>
             </CardContent>
           </Card>
@@ -93,6 +83,7 @@ const AdminPage = () => {
             </CardContent>
           </Card>
         </div>
+
 
         <Card className="shadow-card border-border/50">
           <CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />System Health</CardTitle></CardHeader>
