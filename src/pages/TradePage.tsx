@@ -31,8 +31,10 @@ interface Trade {
   assetPair: string;
   rr: string;
   strategy?: string;
+  session?: string;
   createdAt: string;
 }
+
 
 const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
   const [trade, setTrade] = useState<Trade | null>(null);
@@ -62,8 +64,10 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
         assetPair: data.asset_pair || "",
         rr: data.rr || "",
         strategy: data.strategy || "",
+        session: data.session || "",
         createdAt: data.created_at,
       });
+
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Error loading trade" });
@@ -108,12 +112,16 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
         asset_pair: trade.assetPair,
         rr: trade.rr,
         strategy: trade.strategy,
+        session: trade.session || null,
         screenshot_url: trade.screenshot,
         after_trade_screenshot_url: trade.afterTradeScreenshot,
       });
       setSaveProgress(100);
       toast({ title: "Trade updated", description: "Changes saved successfully." });
       setIsEditing(false);
+      // Notify other views (history list, dashboard, overview)
+      try { window.dispatchEvent(new CustomEvent("trades-updated")); } catch { /* noop */ }
+
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Error updating trade" });
@@ -194,11 +202,13 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
             {([
               ["assetPair", "Asset Pair"],
               ["strategy", "Strategy"],
+              ["session", "Session"],
               ["entry", "Entry"],
               ["tp", "Take Profit"],
               ["sl", "Stop Loss"],
               ["rr", "Risk Reward R/R"],
             ] as Array<[keyof Trade, string]>).map(([key, label]) => (
+
               <div className="space-y-2" key={key as string}>
                 <Label htmlFor={key as string}>{label}</Label>
                 <Input

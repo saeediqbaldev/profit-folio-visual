@@ -16,10 +16,6 @@ import AdminPage from "@/pages/AdminPage";
 import TradePage from "@/pages/TradePage";
 import TradingOverviewPage from "@/pages/TradingOverviewPage";
 import LandingPage from "@/pages/LandingPage";
-import PsxJournalPage from "@/pages/psx/PsxJournalPage";
-import PsxDashboardPage from "@/pages/psx/PsxDashboardPage";
-import PsxHistoryPage from "@/pages/psx/PsxHistoryPage";
-import PsxOverviewPage from "@/pages/psx/PsxOverviewPage";
 import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -38,6 +34,13 @@ const App = () => {
     const skipLanding = sessionStorage.getItem('skip-landing');
     if (skipLanding === 'true' || isAuthenticated) {
       setShowLanding(false);
+    }
+  }, [isAuthenticated]);
+
+  // Ensure stats page is the home page when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setCurrentPage((p) => (p === "dashboard" || p === "history" || p === "overview" || p === "journal" || p === "profile" || p === "admin" || p === "trade" ? p : "dashboard"));
     }
   }, [isAuthenticated]);
 
@@ -63,6 +66,7 @@ const App = () => {
   const handleAuthSuccess = () => {
     sessionStorage.setItem('skip-landing', 'true');
     setShowLanding(false);
+    setCurrentPage("dashboard");
   };
 
   if (loading) {
@@ -130,19 +134,10 @@ const App = () => {
                   onLogout={handleLogout}
                 />
                 <main className="flex-1 overflow-auto">
-                  {/* Forex Pages */}
                   {currentPage === "journal" && <JournalPage />}
                   {currentPage === "dashboard" && <DashboardPage />}
                   {currentPage === "history" && <TradingHistoryPage onViewTrade={handleViewTrade} />}
                   {currentPage === "overview" && <TradingOverviewPage />}
-                  
-                  {/* PSX Pages */}
-                  {currentPage === "psx-journal" && <PsxJournalPage />}
-                  {currentPage === "psx-dashboard" && <PsxDashboardPage />}
-                  {currentPage === "psx-history" && <PsxHistoryPage />}
-                  {currentPage === "psx-overview" && <PsxOverviewPage />}
-                  
-                  {/* Common Pages */}
                   {currentPage === "profile" && <ProfilePage />}
                   {currentPage === "admin" && <AdminPage />}
                   {currentPage === "trade" && selectedTradeId && (
