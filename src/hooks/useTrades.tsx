@@ -16,14 +16,19 @@ export interface Trade {
   afterTradeScreenshot: string | null;
   assetPair: string;
   rr: string;
+  session?: string;
   strategy?: string;
   createdAt: string;
   tradeDate?: string;
 }
 
-const tradesCache: { data: Trade[]; timestamp: number } | null = null;
-let cacheRef: { data: Trade[]; timestamp: number } | null = tradesCache;
+let cacheRef: { data: Trade[]; timestamp: number } | null = null;
 const CACHE_DURATION = 60000;
+const TRADES_EVENT = "trades-updated";
+
+const broadcast = () => {
+  try { window.dispatchEvent(new CustomEvent(TRADES_EVENT)); } catch { /* noop */ }
+};
 
 const transformTrade = (trade: any): Trade => ({
   id: trade.id,
@@ -38,18 +43,16 @@ const transformTrade = (trade: any): Trade => ({
   afterTradeScreenshot: trade.after_trade_screenshot_url,
   assetPair: trade.asset_pair || "",
   rr: trade.rr || "",
+  session: trade.session || "",
   strategy: trade.strategy || "",
   createdAt: trade.created_at,
   tradeDate: trade.trade_date || trade.created_at,
 });
 
 export const useTrades = () => {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [trades, setTrades] = useState<Trade[]>(cacheRef?.data || []);
+  const [loading, setLoading] = useState(!cacheRef);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [totalCount, setTotalCount] = useState(0);
-  const [loadedCount, setLoadedCount] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
   const loadingRef = useRef(false);
@@ -65,132 +68,95 @@ export const useTrades = () => {
 
       if (!forceRefresh && cacheRef && Date.now() - cacheRef.timestamp < CACHE_DURATION) {
         setTrades(cacheRef.data);
-        setTotalCount(cacheRef.data.length);
-        setLoadedCount(cacheRef.data.length);
         setLoading(false);
+        setStatus("success");
         loadingRef.current = false;
         return;
       }
 
-      setProgress(5);
       setStatus("loading");
-      setTrades([]);
-
       try {
         const data = await api.get<any[]>("/api/trades");
         const allTrades = (data || []).map(transformTrade);
-        const total = allTrades.length;
-        setTotalCount(total);
-        setLoadedCount(0);
-        setProgress(50);
-        setLoading(false);
-
-        if (total === 0) {
-          cacheRef = { data: [], timestamp: Date.now() };
-          setProgress(100);
-          setStatus("success");
-          loadingRef.current = false;
-          return;
-        }
-
-        const batchSize = 10;
-        let currentBatch = 0;
-        const renderBatch = () => {
-          const start = currentBatch * batchSize;
-          const end = Math.min(start + batchSize, allTrades.length);
-          const batch = allTrades.slice(0, end);
-          setTrades(batch);
-          setLoadedCount(end);
-          setProgress(Math.min(50 + (end / allTrades.length) * 50, 99));
-          currentBatch++;
-          if (end < allTrades.length) {
-            requestAnimationFrame(renderBatch);
-          } else {
-            cacheRef = { data: allTrades, timestamp: Date.now() };
-            setProgress(100);
-            setStatus("success");
-          }
-        };
-        requestAnimationFrame(renderBatch);
+        cacheRef = { data: allTrades, timestamp: Date.now() };
+        setTrades(allTrades);
+        setStatus("success");
       } catch (error) {
         console.error("Error loading trades:", error);
         setStatus("error");
-        toast({
-          variant: "destructive",
-          title: "Error loading trades",
-          description: "Failed to load your trades.",
-        });
+        toast({ variant: "destructive", title: "Error loading trades" });
       } finally {
         loadingRef.current = false;
-        setTimeout(() => setProgress(0), 1500);
+        setLoading(false);
       }
     },
     [user, toast]
   );
 
+  useEffect(() => { loadTrades(); }, [loadTrades]);
+
+  // Listen for global trade updates from other components
   useEffect(() => {
-    loadTrades();
-  }, [loadTrades]);
+    const handler = () => {
+      if (cacheRef) setTrades(cacheRef.data);
+    };
+    window.addEventListener(TRADES_EVENT, handler);
+    return () => window.removeEventListener(TRADES_EVENT, handler);
+  }, []);
 
-  const updateTrade = useCallback(
-    async (
-      updatedTrade: Trade,
-      onProgress?: (p: number, s?: "loading" | "success" | "error") => void
-    ) => {
-      if (!user) return;
-      onProgress?.(10, "loading");
-      try {
-        onProgress?.(40, "loading");
-        await api.put(`/api/trades/${updatedTrade.id}`, {
-          entry: updatedTrade.entry,
-          reason: updatedTrade.reason,
-          tp: updatedTrade.tp,
-          sl: updatedTrade.sl,
-          result: updatedTrade.result,
-          learning: updatedTrade.learning,
-          asset_pair: updatedTrade.assetPair,
-          rr: updatedTrade.rr,
-          strategy: updatedTrade.strategy,
-          screenshot_url: updatedTrade.screenshot,
-          after_trade_screenshot_url: updatedTrade.afterTradeScreenshot,
-        });
-        onProgress?.(80, "loading");
-        setTrades((prev) =>
-          prev.map((t) => (t.id === updatedTrade.id ? updatedTrade : t))
-        );
-        if (cacheRef) {
-          cacheRef.data = cacheRef.data.map((t) =>
-            t.id === updatedTrade.id ? updatedTrade : t
-          );
-        }
-        onProgress?.(100, "success");
-        toast({ title: "Trade updated successfully" });
-      } catch (error) {
-        console.error("Error updating trade:", error);
-        onProgress?.(100, "error");
-        toast({ variant: "destructive", title: "Error updating trade" });
-      }
-    },
-    [user, toast]
-  );
+  const addTrade = useCallback(async (payload: any) => {
+    const res: any = await api.post("/api/trades", payload);
+    const t = transformTrade(res);
+    const next = [t, ...(cacheRef?.data || [])];
+    cacheRef = { data: next, timestamp: Date.now() };
+    setTrades(next);
+    broadcast();
+    toast({ title: "Trade added" });
+    return t;
+  }, [toast]);
 
-  const deleteTrade = useCallback(
-    async (id: string) => {
-      if (!user) return;
-      try {
-        await api.del(`/api/trades/${id}`);
-        setTrades((prev) => prev.filter((t) => t.id !== id));
-        if (cacheRef) {
-          cacheRef.data = cacheRef.data.filter((t) => t.id !== id);
-        }
-        toast({ title: "Trade deleted" });
-      } catch (error) {
-        console.error("Error deleting trade:", error);
-        toast({ variant: "destructive", title: "Error deleting trade" });
-      }
-    },
-    [user, toast]
-  );
+  const updateTrade = useCallback(async (updatedTrade: Trade) => {
+    if (!user) return;
+    try {
+      await api.put(`/api/trades/${updatedTrade.id}`, {
+        entry: updatedTrade.entry,
+        reason: updatedTrade.reason,
+        tp: updatedTrade.tp,
+        sl: updatedTrade.sl,
+        result: updatedTrade.result,
+        learning: updatedTrade.learning,
+        asset_pair: updatedTrade.assetPair,
+        rr: updatedTrade.rr,
+        session: updatedTrade.session || null,
+        strategy: updatedTrade.strategy,
+        screenshot_url: updatedTrade.screenshot,
+        after_trade_screenshot_url: updatedTrade.afterTradeScreenshot,
+      });
+      const next = (cacheRef?.data || []).map((t) => (t.id === updatedTrade.id ? updatedTrade : t));
+      cacheRef = { data: next, timestamp: Date.now() };
+      setTrades(next);
+      broadcast();
+      toast({ title: "Trade updated" });
+    } catch (error) {
+      console.error("Error updating trade:", error);
+      toast({ variant: "destructive", title: "Error updating trade" });
+    }
+  }, [user, toast]);
+
+  const deleteTrade = useCallback(async (id: string) => {
+    if (!user) return;
+    try {
+      await api.del(`/api/trades/${id}`);
+      const next = (cacheRef?.data || []).filter((t) => t.id !== id);
+      cacheRef = { data: next, timestamp: Date.now() };
+      setTrades(next);
+      broadcast();
+      toast({ title: "Trade deleted" });
+    } catch (error) {
+      console.error("Error deleting trade:", error);
+      toast({ variant: "destructive", title: "Error deleting trade" });
+    }
+  }, [user, toast]);
 
   const stats = useMemo(() => {
     const wins = trades.filter((t) => t.result?.toLowerCase() === "win").length;
@@ -206,17 +172,16 @@ export const useTrades = () => {
   return {
     trades,
     loading,
-    progress,
+    progress: 0,
     status,
     stats,
-    totalCount,
-    loadedCount,
+    totalCount: trades.length,
+    loadedCount: trades.length,
+    addTrade,
     updateTrade,
     deleteTrade,
     refetch: () => loadTrades(true),
   };
 };
 
-export const clearTradesCache = () => {
-  cacheRef = null;
-};
+export const clearTradesCache = () => { cacheRef = null; broadcast(); };
