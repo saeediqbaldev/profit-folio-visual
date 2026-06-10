@@ -33,29 +33,17 @@ CREATE TABLE IF NOT EXISTS trades (
   learning TEXT,
   asset_pair TEXT,
   rr TEXT,
+  session TEXT,
   screenshot_url TEXT,
   after_trade_screenshot_url TEXT,
   trade_date DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE trades ADD COLUMN IF NOT EXISTS session TEXT;
 CREATE INDEX IF NOT EXISTS idx_trades_created_at ON trades(created_at DESC);
 
--- PSX trades
-CREATE TABLE IF NOT EXISTS psx_trades (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sno SERIAL,
-  strategy TEXT,
-  stock_symbol TEXT NOT NULL,
-  shares_purchased INTEGER NOT NULL,
-  entry_price NUMERIC(18,4) NOT NULL,
-  trade_logic TEXT,
-  tp_exit_price NUMERIC(18,4),
-  profit_loss NUMERIC(18,4),
-  result TEXT DEFAULT 'pending',
-  trade_date DATE NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_psx_created_at ON psx_trades(created_at DESC);
+-- Drop legacy PSX table if present
+DROP TABLE IF EXISTS psx_trades;
 
 -- Activity logs
 CREATE TABLE IF NOT EXISTS activity_logs (

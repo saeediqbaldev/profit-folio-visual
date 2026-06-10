@@ -1,4 +1,4 @@
-import { PenTool, LayoutDashboard, Calendar, User, TrendingUp, X, History, ChevronDown } from "lucide-react";
+import { PenTool, LayoutDashboard, Calendar, User, TrendingUp, X, History } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,8 +12,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
 
 interface AppSidebarProps {
   currentPage: string;
@@ -23,21 +21,12 @@ interface AppSidebarProps {
 
 export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   const { setOpenMobile, isMobile } = useSidebar();
-  const [forexOpen, setForexOpen] = useState(true);
-  const [psxOpen, setPsxOpen] = useState(true);
-  
-  const forexNavigation = [
-    { id: "journal", label: "Add Trades", icon: PenTool },
+
+  const navigation = [
     { id: "dashboard", label: "Stats / Analytics", icon: LayoutDashboard },
+    { id: "journal", label: "Add Trades", icon: PenTool },
     { id: "history", label: "Trading History", icon: History },
     { id: "overview", label: "Overview", icon: Calendar },
-  ];
-
-  const psxNavigation = [
-    { id: "psx-journal", label: "Add Trades", icon: PenTool },
-    { id: "psx-dashboard", label: "Stats / Analytics", icon: LayoutDashboard },
-    { id: "psx-history", label: "Trading History", icon: History },
-    { id: "psx-overview", label: "Overview", icon: Calendar },
   ];
 
   const accountNavigation = [
@@ -46,9 +35,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
 
   const handleNavigate = (page: string) => {
     onNavigate(page);
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    if (isMobile) setOpenMobile(false);
   };
 
   return (
@@ -66,88 +53,34 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
             </div>
           </div>
           {isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setOpenMobile(false)}
-              className="md:hidden"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setOpenMobile(false)} className="md:hidden">
               <X className="h-5 w-5" />
             </Button>
           )}
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent>
-        {/* Forex Category */}
         <SidebarGroup>
-          <Collapsible open={forexOpen} onOpenChange={setForexOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 transition-colors">
-                <span>Forex</span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${forexOpen ? 'rotate-180' : ''}`} />
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {forexNavigation.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentPage === item.id;
-                    return (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          onClick={() => handleNavigate(item.id)}
-                          isActive={isActive}
-                          tooltip={item.label}
-                        >
-                          <Icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
+          <SidebarGroupLabel>Forex</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPage === item.id;
+                return (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton onClick={() => handleNavigate(item.id)} isActive={isActive} tooltip={item.label}>
+                      <Icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* PSX Stocks Category */}
-        <SidebarGroup>
-          <Collapsible open={psxOpen} onOpenChange={setPsxOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-md px-2 py-1.5 transition-colors">
-                <span>PSX Stocks</span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${psxOpen ? 'rotate-180' : ''}`} />
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {psxNavigation.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentPage === item.id;
-                    return (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          onClick={() => handleNavigate(item.id)}
-                          isActive={isActive}
-                          tooltip={item.label}
-                        >
-                          <Icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        {/* Account */}
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -157,11 +90,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
                 const isActive = currentPage === item.id;
                 return (
                   <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      onClick={() => handleNavigate(item.id)}
-                      isActive={isActive}
-                      tooltip={item.label}
-                    >
+                    <SidebarMenuButton onClick={() => handleNavigate(item.id)} isActive={isActive} tooltip={item.label}>
                       <Icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
