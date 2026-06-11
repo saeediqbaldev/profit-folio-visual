@@ -398,23 +398,29 @@ const DashboardPage = () => {
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {timeSeriesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300 * chartZoom.winRate}>
-                <AreaChart data={timeSeriesData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}%`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+              <ResponsiveContainer width="100%" height={320 * chartZoom.winRate}>
+                <AreaChart data={timeSeriesData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gWinRate" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 6" className="opacity-20" vertical={false} />
+                  <XAxis dataKey="period" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
                     formatter={(value: number) => [`${value.toFixed(1)}%`, 'Win Rate']}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="winRate" 
-                    stroke="hsl(var(--primary))" 
-                    fill="hsl(var(--primary))" 
-                    fillOpacity={0.3}
-                    strokeWidth={2}
+                  <Area
+                    type="monotone"
+                    dataKey="winRate"
+                    stroke="hsl(var(--primary))"
+                    fill="url(#gWinRate)"
+                    strokeWidth={2.5}
                     name="Win Rate"
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
