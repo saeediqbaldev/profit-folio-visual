@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { ASSET_PAIRS, SESSIONS } from "@/components/journal/TradeForm";
+import { useStrategies } from "@/hooks/useStrategies";
 
 interface Trade {
   id: string;
