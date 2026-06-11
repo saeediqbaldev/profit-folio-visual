@@ -63,6 +63,15 @@ const App = () => {
     setCurrentPage("trade");
   };
 
+  useEffect(() => {
+    const onOpenTrade = (e: Event) => {
+      const id = (e as CustomEvent).detail;
+      if (typeof id === "string" && id) handleViewTrade(id);
+    };
+    window.addEventListener("open-trade", onOpenTrade);
+    return () => window.removeEventListener("open-trade", onOpenTrade);
+  }, []);
+
   const handleAuthSuccess = () => {
     sessionStorage.setItem('skip-landing', 'true');
     setShowLanding(false);
