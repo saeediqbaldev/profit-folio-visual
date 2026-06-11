@@ -77,7 +77,9 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
+  const [uploadingField, setUploadingField] = useState<null | 'screenshot' | 'afterTradeScreenshot'>(null);
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
     const file = e.target.files?.[0];
     if (!file) return;
     const MAX = 5 * 1024 * 1024;
@@ -90,9 +92,17 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       toast({ variant: "destructive", title: "File too large", description: "Max 5MB." });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => setFormData(prev => ({ ...prev, [field]: ev.target?.result as string }));
-    reader.readAsDataURL(file);
+    setUploadingField(field);
+    try {
+      const { url } = await api.upload(file);
+      setFormData(prev => ({ ...prev, [field]: url }));
+    } catch {
+      toast({ variant: "destructive", title: "Upload failed" });
+    } finally {
+      setUploadingField(null);
+      // reset input so same file can be reselected
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
