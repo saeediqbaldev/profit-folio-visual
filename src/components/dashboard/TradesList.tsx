@@ -239,6 +239,15 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
                               </Select>
                             </div>
                             <div className="space-y-2">
+                              <Label>Strategy</Label>
+                              <Select value={editFormData.strategy || ""} onValueChange={(v) => handleEditInputChange('strategy', v)}>
+                                <SelectTrigger><SelectValue placeholder="Select strategy" /></SelectTrigger>
+                                <SelectContent>
+                                  {userStrategies.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
                               <Label>Session</Label>
                               <Select value={editFormData.session || ""} onValueChange={(v) => handleEditInputChange('session', v)}>
                                 <SelectTrigger><SelectValue placeholder="Select session" /></SelectTrigger>
