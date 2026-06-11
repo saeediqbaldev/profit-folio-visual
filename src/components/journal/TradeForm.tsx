@@ -246,8 +246,8 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                 <Label>{field === 'screenshot' ? 'Setup Screenshot' : 'After Trade Screenshot'}</Label>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3">
-                    <Button type="button" variant="outline" onClick={() => document.getElementById(`f-${field}`)?.click()} className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />Upload Image
+                    <Button type="button" variant="outline" disabled={uploadingField === field} onClick={() => document.getElementById(`f-${field}`)?.click()} className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />{uploadingField === field ? "Uploading..." : "Upload Image"}
                     </Button>
                     <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                   </div>
