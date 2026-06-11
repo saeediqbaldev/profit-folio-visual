@@ -201,6 +201,8 @@ const ProfilePage = () => {
             )}
           </CardContent>
         </Card>
+
+        <ResourceUsage />
       </div>
     </div>
   );
