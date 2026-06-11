@@ -46,6 +46,7 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
   const [saveProgress, setSaveProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(!viewOnly);
   const { toast } = useToast();
+  const { strategies } = useStrategies();
 
   useEffect(() => { loadTrade(); /* eslint-disable-next-line */ }, [tradeId]);
 
