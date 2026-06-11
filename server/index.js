@@ -185,6 +185,84 @@ app.get("/api/public/trades", async (_req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ---------- System / Resource usage ----------
+let lastCpu = { idle: 0, total: 0 };
+function cpuPercent() {
+  const cpus = os.cpus();
+  let idle = 0, total = 0;
+  for (const c of cpus) {
+    for (const t of Object.values(c.times)) total += t;
+    idle += c.times.idle;
+  }
+  const idleDiff = idle - lastCpu.idle;
+  const totalDiff = total - lastCpu.total;
+  lastCpu = { idle, total };
+  if (totalDiff <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((1 - idleDiff / totalDiff) * 100)));
+}
+cpuPercent(); // prime sample
+
+function dirSizeBytes(dir) {
+  let bytes = 0;
+  try {
+    const files = fs.readdirSync(dir);
+    for (const f of files) {
+      try {
+        const st = fs.statSync(path.join(dir, f));
+        if (st.isFile()) bytes += st.size;
+      } catch { /* skip */ }
+    }
+  } catch { /* skip */ }
+  return bytes;
+}
+
+app.get("/api/system/stats", async (_req, res) => {
+  try {
+    const t = await query("SELECT COUNT(*)::int AS c FROM trades");
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const upload = dirSizeBytes(UPLOAD_DIR);
+    let dbBytes = 0;
+    try {
+      const r = await query("SELECT pg_database_size(current_database())::bigint AS s");
+      dbBytes = Number(r.rows[0]?.s || 0);
+    } catch { /* ignore */ }
+    const prof = (await query("SELECT username, full_name FROM profile WHERE id='admin'")).rows[0] || {};
+    res.json({
+      username: prof.username || prof.full_name || "admin",
+      totalTrades: t.rows[0].c,
+      storageBytes: upload + dbBytes,
+      uploadsBytes: upload,
+      databaseBytes: dbBytes,
+      cpuPercent: cpuPercent(),
+      memory: {
+        totalBytes: totalMem,
+        usedBytes: usedMem,
+        freeBytes: freeMem,
+        percent: Math.round((usedMem / totalMem) * 100),
+      },
+      uptimeSeconds: Math.round(process.uptime()),
+      loadAvg: os.loadavg(),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/system/timeline", async (req, res) => {
+  try {
+    const days = Math.max(1, Math.min(365, parseInt(String(req.query.days || "7"), 10) || 7));
+    const { rows } = await query(
+      `SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
+              COUNT(*)::int AS trades
+       FROM trades
+       WHERE created_at >= NOW() - ($1::int || ' days')::interval
+       GROUP BY 1 ORDER BY 1`,
+      [days]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---------- Static frontend ----------
 if (fs.existsSync(STATIC_DIR)) {
   app.use(express.static(STATIC_DIR));
