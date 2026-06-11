@@ -55,6 +55,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { strategies: userStrategies } = useStrategies();
 
   const handleEditClick = useCallback((trade: Trade) => {
     setEditingTrade(trade);
