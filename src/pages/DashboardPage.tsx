@@ -343,24 +343,27 @@ const DashboardPage = () => {
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300 * (chartZoom.distribution || 1)}>
+              <ResponsiveContainer width="100%" height={320 * (chartZoom.distribution || 1)}>
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60 * (chartZoom.distribution || 1)}
-                    outerRadius={100 * (chartZoom.distribution || 1)}
-                    paddingAngle={5}
+                    innerRadius={70 * (chartZoom.distribution || 1)}
+                    outerRadius={110 * (chartZoom.distribution || 1)}
+                    paddingAngle={4}
+                    cornerRadius={8}
                     dataKey="value"
+                    stroke="hsl(var(--background))"
+                    strokeWidth={3}
                     label={({ name, value }) => `${name}: ${value}`}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
