@@ -240,7 +240,15 @@ const TradingOverviewPage = () => {
               </div>
               <div className="space-y-2">
                 {dayModal.trades.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 border border-border/50 rounded-lg hover:bg-muted/30">
+                  <button
+                    type="button"
+                    key={t.id}
+                    onClick={() => {
+                      setDayModal(null);
+                      try { window.dispatchEvent(new CustomEvent("open-trade", { detail: t.id })); } catch { /* noop */ }
+                    }}
+                    className="w-full flex items-center justify-between p-3 border border-border/50 rounded-lg hover:bg-muted/30 hover:border-primary/40 transition text-left"
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">{t.asset_pair || "Trade"} — {t.entry}</div>
                       <div className="text-xs text-muted-foreground truncate">
@@ -250,7 +258,7 @@ const TradingOverviewPage = () => {
                     <Badge variant={t.result?.toUpperCase() === "WIN" ? "default" : t.result?.toUpperCase() === "LOSS" ? "destructive" : "secondary"}>
                       {t.result || "—"}
                     </Badge>
-                  </div>
+                  </button>
                 ))}
                 {dayModal.trades.length === 0 && (
                   <p className="text-center text-muted-foreground py-6">No trades for this date</p>

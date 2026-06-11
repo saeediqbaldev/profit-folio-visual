@@ -130,54 +130,76 @@ const DashboardPage = () => {
     }));
   };
 
+  const tooltipStyle = {
+    backgroundColor: 'hsl(var(--card))',
+    border: '1px solid hsl(var(--border))',
+    borderRadius: 12,
+    boxShadow: '0 10px 30px -10px hsl(var(--primary) / 0.25)',
+    padding: '8px 12px',
+  } as const;
+
   // Render performance chart based on type
   const renderPerformanceChart = () => {
-    const height = 350 * chartZoom.performance;
+    const height = 360 * chartZoom.performance;
     const commonProps = { width: "100%" as const, height, data: timeSeriesData };
 
     switch (performanceChartType) {
       case 'line':
         return (
           <ResponsiveContainer {...commonProps}>
-            <LineChart data={timeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-              <Legend />
-              <Line type="monotone" dataKey="wins" stroke="hsl(var(--success))" strokeWidth={2} name="Wins" dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="losses" stroke="hsl(var(--danger))" strokeWidth={2} name="Losses" dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="breakeven" stroke="hsl(var(--muted-foreground))" strokeWidth={2} name="Breakeven" dot={{ r: 4 }} />
+            <LineChart data={timeSeriesData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 6" className="opacity-20" vertical={false} />
+              <XAxis dataKey="period" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'hsl(var(--primary) / 0.2)', strokeWidth: 2 }} />
+              <Legend iconType="circle" />
+              <Line type="monotone" dataKey="wins" stroke="hsl(var(--success))" strokeWidth={2.5} name="Wins" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }} />
+              <Line type="monotone" dataKey="losses" stroke="hsl(var(--danger))" strokeWidth={2.5} name="Losses" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }} />
+              <Line type="monotone" dataKey="breakeven" stroke="hsl(var(--muted-foreground))" strokeWidth={2.5} name="Breakeven" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }} />
             </LineChart>
           </ResponsiveContainer>
         );
       case 'area':
         return (
           <ResponsiveContainer {...commonProps}>
-            <AreaChart data={timeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-              <Legend />
-              <Area type="monotone" dataKey="wins" stackId="1" stroke="hsl(var(--success))" fill="hsl(var(--success))" fillOpacity={0.6} name="Wins" />
-              <Area type="monotone" dataKey="losses" stackId="1" stroke="hsl(var(--danger))" fill="hsl(var(--danger))" fillOpacity={0.6} name="Losses" />
-              <Area type="monotone" dataKey="breakeven" stackId="1" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted-foreground))" fillOpacity={0.6} name="Breakeven" />
+            <AreaChart data={timeSeriesData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gWins" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.55} />
+                  <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="gLosses" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--danger))" stopOpacity={0.55} />
+                  <stop offset="100%" stopColor="hsl(var(--danger))" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="gBE" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 6" className="opacity-20" vertical={false} />
+              <XAxis dataKey="period" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend iconType="circle" />
+              <Area type="monotone" dataKey="wins" stroke="hsl(var(--success))" strokeWidth={2.5} fill="url(#gWins)" name="Wins" />
+              <Area type="monotone" dataKey="losses" stroke="hsl(var(--danger))" strokeWidth={2.5} fill="url(#gLosses)" name="Losses" />
+              <Area type="monotone" dataKey="breakeven" stroke="hsl(var(--muted-foreground))" strokeWidth={2} fill="url(#gBE)" name="Breakeven" />
             </AreaChart>
           </ResponsiveContainer>
         );
       case 'bar':
         return (
           <ResponsiveContainer {...commonProps}>
-            <BarChart data={timeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-              <Legend />
-              <Bar dataKey="wins" fill="hsl(var(--success))" name="Wins" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="losses" fill="hsl(var(--danger))" name="Losses" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="breakeven" fill="hsl(var(--muted-foreground))" name="Breakeven" radius={[4, 4, 0, 0]} />
+            <BarChart data={timeSeriesData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }} barGap={6} barCategoryGap="20%">
+              <CartesianGrid strokeDasharray="3 6" className="opacity-20" vertical={false} />
+              <XAxis dataKey="period" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'hsl(var(--muted) / 0.4)' }} />
+              <Legend iconType="circle" />
+              <Bar dataKey="wins" fill="hsl(var(--success))" name="Wins" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="losses" fill="hsl(var(--danger))" name="Losses" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="breakeven" fill="hsl(var(--muted-foreground))" name="Breakeven" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         );
@@ -321,24 +343,27 @@ const DashboardPage = () => {
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300 * (chartZoom.distribution || 1)}>
+              <ResponsiveContainer width="100%" height={320 * (chartZoom.distribution || 1)}>
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60 * (chartZoom.distribution || 1)}
-                    outerRadius={100 * (chartZoom.distribution || 1)}
-                    paddingAngle={5}
+                    innerRadius={70 * (chartZoom.distribution || 1)}
+                    outerRadius={110 * (chartZoom.distribution || 1)}
+                    paddingAngle={4}
+                    cornerRadius={8}
                     dataKey="value"
+                    stroke="hsl(var(--background))"
+                    strokeWidth={3}
                     label={({ name, value }) => `${name}: ${value}`}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -373,23 +398,29 @@ const DashboardPage = () => {
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {timeSeriesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300 * chartZoom.winRate}>
-                <AreaChart data={timeSeriesData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}%`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+              <ResponsiveContainer width="100%" height={320 * chartZoom.winRate}>
+                <AreaChart data={timeSeriesData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gWinRate" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 6" className="opacity-20" vertical={false} />
+                  <XAxis dataKey="period" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
                     formatter={(value: number) => [`${value.toFixed(1)}%`, 'Win Rate']}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="winRate" 
-                    stroke="hsl(var(--primary))" 
-                    fill="hsl(var(--primary))" 
-                    fillOpacity={0.3}
-                    strokeWidth={2}
+                  <Area
+                    type="monotone"
+                    dataKey="winRate"
+                    stroke="hsl(var(--primary))"
+                    fill="url(#gWinRate)"
+                    strokeWidth={2.5}
                     name="Win Rate"
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
                   />
                 </AreaChart>
               </ResponsiveContainer>

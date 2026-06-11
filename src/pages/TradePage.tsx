@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Upload, X, Edit, Eye, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import CandleLoader from "@/components/ui/candle-loader";
 import ProgressToast from "@/components/ui/progress-toast";
+import { ASSET_PAIRS, SESSIONS } from "@/components/journal/TradeForm";
+import { useStrategies } from "@/hooks/useStrategies";
 
 interface TradePageProps {
   tradeId: string;
@@ -43,6 +46,7 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
   const [saveProgress, setSaveProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(!viewOnly);
   const { toast } = useToast();
+  const { strategies } = useStrategies();
 
   useEffect(() => { loadTrade(); /* eslint-disable-next-line */ }, [tradeId]);
 
@@ -199,16 +203,66 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Asset Pair</Label>
+              {isEditing ? (
+                <Select value={trade.assetPair || ""} onValueChange={(v) => setTrade({ ...trade, assetPair: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select asset pair" /></SelectTrigger>
+                  <SelectContent>
+                    {ASSET_PAIRS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={trade.assetPair || ""} readOnly className="bg-muted cursor-default" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Strategy</Label>
+              {isEditing ? (
+                <Select value={trade.strategy || ""} onValueChange={(v) => setTrade({ ...trade, strategy: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select strategy" /></SelectTrigger>
+                  <SelectContent>
+                    {strategies.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={trade.strategy || ""} readOnly className="bg-muted cursor-default" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Session</Label>
+              {isEditing ? (
+                <Select value={trade.session || ""} onValueChange={(v) => setTrade({ ...trade, session: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select session" /></SelectTrigger>
+                  <SelectContent>
+                    {SESSIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={trade.session || ""} readOnly className="bg-muted cursor-default" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Result</Label>
+              {isEditing ? (
+                <Select value={trade.result || ""} onValueChange={(v) => setTrade({ ...trade, result: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select result" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WIN">WIN</SelectItem>
+                    <SelectItem value="LOSS">LOSS</SelectItem>
+                    <SelectItem value="BE">BE (Break Even)</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={trade.result || ""} readOnly className="bg-muted cursor-default" />
+              )}
+            </div>
             {([
-              ["assetPair", "Asset Pair"],
-              ["strategy", "Strategy"],
-              ["session", "Session"],
               ["entry", "Entry"],
               ["tp", "Take Profit"],
               ["sl", "Stop Loss"],
               ["rr", "Risk Reward R/R"],
             ] as Array<[keyof Trade, string]>).map(([key, label]) => (
-
               <div className="space-y-2" key={key as string}>
                 <Label htmlFor={key as string}>{label}</Label>
                 <Input
@@ -227,12 +281,6 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
             <Textarea id="reason" value={trade.reason}
               onChange={(e) => isEditing && setTrade({ ...trade, reason: e.target.value })}
               rows={3} readOnly={!isEditing} className={!isEditing ? "bg-muted cursor-default resize-none" : ""} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="result">Result</Label>
-            <Input id="result" value={trade.result}
-              onChange={(e) => isEditing && setTrade({ ...trade, result: e.target.value })}
-              placeholder="WIN / LOSS / BE" readOnly={!isEditing} className={!isEditing ? "bg-muted cursor-default" : ""} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="learning">Learning</Label>

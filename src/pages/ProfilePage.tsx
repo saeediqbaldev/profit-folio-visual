@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useStrategies } from "@/hooks/useStrategies";
 import { api } from "@/lib/api";
 import ProfileUpload from "@/components/profile/ProfileUpload";
+import ResourceUsage from "@/components/profile/ResourceUsage";
 import CandleLoader from "@/components/ui/candle-loader";
 
 interface Profile {
@@ -200,6 +201,8 @@ const ProfilePage = () => {
             )}
           </CardContent>
         </Card>
+
+        <ResourceUsage />
       </div>
     </div>
   );

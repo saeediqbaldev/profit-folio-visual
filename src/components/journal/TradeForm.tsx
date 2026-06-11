@@ -14,6 +14,7 @@ import { useStrategies } from "@/hooks/useStrategies";
 import { z } from "zod";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export const ASSET_PAIRS = [
   { value: "XAUUSD", label: "XAUUSD (Gold)" },
@@ -76,7 +77,9 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
+  const [uploadingField, setUploadingField] = useState<null | 'screenshot' | 'afterTradeScreenshot'>(null);
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
     const file = e.target.files?.[0];
     if (!file) return;
     const MAX = 5 * 1024 * 1024;
@@ -89,9 +92,17 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       toast({ variant: "destructive", title: "File too large", description: "Max 5MB." });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => setFormData(prev => ({ ...prev, [field]: ev.target?.result as string }));
-    reader.readAsDataURL(file);
+    setUploadingField(field);
+    try {
+      const { url } = await api.upload(file);
+      setFormData(prev => ({ ...prev, [field]: url }));
+    } catch {
+      toast({ variant: "destructive", title: "Upload failed" });
+    } finally {
+      setUploadingField(null);
+      // reset input so same file can be reselected
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -235,8 +246,8 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                 <Label>{field === 'screenshot' ? 'Setup Screenshot' : 'After Trade Screenshot'}</Label>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3">
-                    <Button type="button" variant="outline" onClick={() => document.getElementById(`f-${field}`)?.click()} className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />Upload Image
+                    <Button type="button" variant="outline" disabled={uploadingField === field} onClick={() => document.getElementById(`f-${field}`)?.click()} className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />{uploadingField === field ? "Uploading..." : "Upload Image"}
                     </Button>
                     <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                   </div>

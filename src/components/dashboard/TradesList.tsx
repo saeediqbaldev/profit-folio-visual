@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { ASSET_PAIRS, SESSIONS } from "@/components/journal/TradeForm";
+import { useStrategies } from "@/hooks/useStrategies";
 
 interface Trade {
   id: string;
@@ -54,6 +55,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { strategies: userStrategies } = useStrategies();
 
   const handleEditClick = useCallback((trade: Trade) => {
     setEditingTrade(trade);
@@ -233,6 +235,15 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
                                 <SelectTrigger><SelectValue placeholder="Select asset" /></SelectTrigger>
                                 <SelectContent>
                                   {ASSET_PAIRS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Strategy</Label>
+                              <Select value={editFormData.strategy || ""} onValueChange={(v) => handleEditInputChange('strategy', v)}>
+                                <SelectTrigger><SelectValue placeholder="Select strategy" /></SelectTrigger>
+                                <SelectContent>
+                                  {userStrategies.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
