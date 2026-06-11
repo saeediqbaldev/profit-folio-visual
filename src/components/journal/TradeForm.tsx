@@ -14,6 +14,7 @@ import { useStrategies } from "@/hooks/useStrategies";
 import { z } from "zod";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export const ASSET_PAIRS = [
   { value: "XAUUSD", label: "XAUUSD (Gold)" },
