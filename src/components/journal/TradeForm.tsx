@@ -127,8 +127,13 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
         learning: "", screenshot: null, afterTradeScreenshot: null, assetPair: "", session: "",
       });
       setTradeDate(undefined);
-    } catch {
-      toast({ variant: "destructive", title: "Error", description: "Failed to add trade." });
+    } catch (error) {
+      console.error("Failed to add trade:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add trade.",
+      });
     } finally {
       setSubmitting(false);
     }

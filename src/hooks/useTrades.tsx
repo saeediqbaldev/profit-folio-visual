@@ -98,11 +98,11 @@ export const useTrades = () => {
   // Listen for global trade updates from other components
   useEffect(() => {
     const handler = () => {
-      if (cacheRef) setTrades(cacheRef.data);
+      void loadTrades(true);
     };
     window.addEventListener(TRADES_EVENT, handler);
     return () => window.removeEventListener(TRADES_EVENT, handler);
-  }, []);
+  }, [loadTrades]);
 
   const addTrade = useCallback(async (payload: any) => {
     const res: any = await api.post("/api/trades", payload);
@@ -118,7 +118,7 @@ export const useTrades = () => {
   const updateTrade = useCallback(async (updatedTrade: Trade) => {
     if (!user) return;
     try {
-      await api.put(`/api/trades/${updatedTrade.id}`, {
+      const res: any = await api.put(`/api/trades/${updatedTrade.id}`, {
         entry: updatedTrade.entry,
         reason: updatedTrade.reason,
         tp: updatedTrade.tp,
@@ -131,15 +131,22 @@ export const useTrades = () => {
         strategy: updatedTrade.strategy,
         screenshot_url: updatedTrade.screenshot,
         after_trade_screenshot_url: updatedTrade.afterTradeScreenshot,
+        trade_date: updatedTrade.tradeDate || null,
       });
-      const next = (cacheRef?.data || []).map((t) => (t.id === updatedTrade.id ? updatedTrade : t));
+      const savedTrade = transformTrade(res);
+      const next = (cacheRef?.data || []).map((t) => (t.id === savedTrade.id ? savedTrade : t));
       cacheRef = { data: next, timestamp: Date.now() };
       setTrades(next);
       broadcast();
       toast({ title: "Trade updated" });
     } catch (error) {
       console.error("Error updating trade:", error);
-      toast({ variant: "destructive", title: "Error updating trade" });
+      toast({
+        variant: "destructive",
+        title: "Error updating trade",
+        description: error instanceof Error ? error.message : undefined,
+      });
+      throw error;
     }
   }, [user, toast]);
 

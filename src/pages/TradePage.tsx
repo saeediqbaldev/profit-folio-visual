@@ -13,6 +13,7 @@ import CandleLoader from "@/components/ui/candle-loader";
 import ProgressToast from "@/components/ui/progress-toast";
 import { ASSET_PAIRS, SESSIONS } from "@/components/journal/TradeForm";
 import { useStrategies } from "@/hooks/useStrategies";
+import { clearTradesCache } from "@/hooks/useTrades";
 
 interface TradePageProps {
   tradeId: string;
@@ -106,7 +107,7 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
     setSaveProgress(20);
     try {
       setSaveProgress(50);
-      await api.put(`/api/trades/${trade.id}`, {
+      const updated = await api.put(`/api/trades/${trade.id}`, {
         entry: trade.entry,
         reason: trade.reason,
         tp: trade.tp,
@@ -120,15 +121,32 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
         screenshot_url: trade.screenshot,
         after_trade_screenshot_url: trade.afterTradeScreenshot,
       });
+      const saved: any = updated;
+      setTrade({
+        id: saved.id,
+        sno: saved.sno,
+        entry: saved.entry,
+        reason: saved.reason || "",
+        tp: saved.tp || "",
+        sl: saved.sl || "",
+        result: saved.result || "",
+        learning: saved.learning || "",
+        screenshot: saved.screenshot_url,
+        afterTradeScreenshot: saved.after_trade_screenshot_url,
+        assetPair: saved.asset_pair || "",
+        rr: saved.rr || "",
+        strategy: saved.strategy || "",
+        session: saved.session || "",
+        createdAt: saved.created_at,
+      });
       setSaveProgress(100);
       toast({ title: "Trade updated", description: "Changes saved successfully." });
       setIsEditing(false);
-      // Notify other views (history list, dashboard, overview)
-      try { window.dispatchEvent(new CustomEvent("trades-updated")); } catch { /* noop */ }
+      clearTradesCache();
 
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Error updating trade" });
+      toast({ variant: "destructive", title: "Error updating trade", description: error instanceof Error ? error.message : undefined });
     } finally {
       setSaving(false);
       setTimeout(() => setSaveProgress(0), 1000);
