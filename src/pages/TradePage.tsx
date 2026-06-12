@@ -13,6 +13,7 @@ import CandleLoader from "@/components/ui/candle-loader";
 import ProgressToast from "@/components/ui/progress-toast";
 import { ASSET_PAIRS, SESSIONS } from "@/components/journal/TradeForm";
 import { useStrategies } from "@/hooks/useStrategies";
+import { clearTradesCache } from "@/hooks/useTrades";
 
 interface TradePageProps {
   tradeId: string;
@@ -141,8 +142,7 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
       setSaveProgress(100);
       toast({ title: "Trade updated", description: "Changes saved successfully." });
       setIsEditing(false);
-      // Notify other views (history list, dashboard, overview)
-      try { window.dispatchEvent(new CustomEvent("trades-updated")); } catch { /* noop */ }
+      clearTradesCache();
 
     } catch (error) {
       console.error(error);
