@@ -102,6 +102,27 @@ app.put("/api/strategies", async (req, res) => {
 });
 
 // ---------- Forex Trades ----------
+const TRADE_FIELDS = [
+  "strategy", "entry", "reason", "tp", "sl", "result", "learning", "asset_pair",
+  "rr", "session", "screenshot_url", "after_trade_screenshot_url", "trade_date",
+];
+
+const normalizeTradeBody = (body = {}) => ({
+  strategy: body.strategy || null,
+  entry: body.entry || null,
+  reason: body.reason || null,
+  tp: body.tp || null,
+  sl: body.sl || null,
+  result: body.result || null,
+  learning: body.learning || null,
+  asset_pair: body.asset_pair || body.assetPair || null,
+  rr: body.rr || null,
+  session: body.session || null,
+  screenshot_url: body.screenshot_url || body.screenshot || null,
+  after_trade_screenshot_url: body.after_trade_screenshot_url || body.afterTradeScreenshot || null,
+  trade_date: body.trade_date || body.tradeDate || null,
+});
+
 app.get("/api/trades", async (_req, res) => {
   try {
     const { rows } = await query("SELECT * FROM trades ORDER BY created_at DESC");
@@ -119,28 +140,35 @@ app.get("/api/trades/:id", async (req, res) => {
 
 app.post("/api/trades", async (req, res) => {
   try {
-    const b = req.body || {};
+    const b = normalizeTradeBody(req.body);
     const { rows } = await query(
       `INSERT INTO trades (strategy, entry, reason, tp, sl, result, learning, asset_pair, rr, session, screenshot_url, after_trade_screenshot_url, trade_date)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [b.strategy, b.entry, b.reason, b.tp, b.sl, b.result, b.learning, b.asset_pair, b.rr, b.session || null, b.screenshot_url, b.after_trade_screenshot_url, b.trade_date || null]
+      [b.strategy, b.entry, b.reason, b.tp, b.sl, b.result, b.learning, b.asset_pair, b.rr, b.session, b.screenshot_url, b.after_trade_screenshot_url, b.trade_date]
     );
     logActivity("TRADE_CREATE", `Forex trade ${rows[0].id}`);
     res.json(rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("POST /api/trades:", e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.put("/api/trades/:id", async (req, res) => {
   try {
-    const fields = ["strategy","entry","reason","tp","sl","result","learning","asset_pair","rr","session","screenshot_url","after_trade_screenshot_url","trade_date"];
+    const b = normalizeTradeBody(req.body);
     const sets = []; const vals = []; let i = 1;
-    for (const f of fields) if (f in req.body) { sets.push(`${f}=$${i++}`); vals.push(req.body[f]); }
+    for (const f of TRADE_FIELDS) if (f in b) { sets.push(`${f}=$${i++}`); vals.push(b[f]); }
     if (!sets.length) return res.json({ ok: true });
     vals.push(req.params.id);
     const { rows } = await query(`UPDATE trades SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`, vals);
+    if (!rows[0]) return res.status(404).json({ error: "Not found" });
     logActivity("TRADE_UPDATE", `Forex trade ${req.params.id}`);
     res.json(rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("PUT /api/trades/:id:", e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete("/api/trades/:id", async (req, res) => {
