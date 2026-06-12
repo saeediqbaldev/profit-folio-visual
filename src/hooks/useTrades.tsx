@@ -141,7 +141,12 @@ export const useTrades = () => {
       toast({ title: "Trade updated" });
     } catch (error) {
       console.error("Error updating trade:", error);
-      toast({ variant: "destructive", title: "Error updating trade" });
+      toast({
+        variant: "destructive",
+        title: "Error updating trade",
+        description: error instanceof Error ? error.message : undefined,
+      });
+      throw error;
     }
   }, [user, toast]);
 

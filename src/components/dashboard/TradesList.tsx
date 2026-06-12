@@ -43,7 +43,7 @@ interface TradesListProps {
   strategies?: string[];
   selectedStrategy?: string;
   onStrategyChange?: (strategy: string) => void;
-  onUpdateTrade: (trade: Trade) => void;
+  onUpdateTrade: (trade: Trade) => void | Promise<void>;
   onDeleteTrade: (id: string) => void;
   onViewTrade: (tradeId: string) => void;
 }
@@ -54,6 +54,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
   const { strategies: userStrategies } = useStrategies();
 
@@ -93,12 +94,17 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
     setEditFormData(prev => prev ? { ...prev, [field]: null } : null);
   }, []);
 
-  const handleEditSubmit = useCallback((e: React.FormEvent) => {
+  const handleEditSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (editFormData) {
-      onUpdateTrade(editFormData);
-      setEditingTrade(null);
-      setEditFormData(null);
+      setUpdating(true);
+      try {
+        await onUpdateTrade(editFormData);
+        setEditingTrade(null);
+        setEditFormData(null);
+      } finally {
+        setUpdating(false);
+      }
     }
   }, [editFormData, onUpdateTrade]);
 
@@ -321,7 +327,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
 
                           <div className="flex justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => setEditingTrade(null)}>Cancel</Button>
-                            <Button type="submit">Update Trade</Button>
+                            <Button type="submit" disabled={updating || uploading}>{updating ? "Updating..." : "Update Trade"}</Button>
                           </div>
                         </form>
                       )}
