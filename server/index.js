@@ -107,21 +107,28 @@ const TRADE_FIELDS = [
   "rr", "session", "screenshot_url", "after_trade_screenshot_url", "trade_date",
 ];
 
-const normalizeTradeBody = (body = {}) => ({
-  strategy: body.strategy || null,
-  entry: body.entry || null,
-  reason: body.reason || null,
-  tp: body.tp || null,
-  sl: body.sl || null,
-  result: body.result || null,
-  learning: body.learning || null,
-  asset_pair: body.asset_pair || body.assetPair || null,
-  rr: body.rr || null,
-  session: body.session || null,
-  screenshot_url: body.screenshot_url || body.screenshot || null,
-  after_trade_screenshot_url: body.after_trade_screenshot_url || body.afterTradeScreenshot || null,
-  trade_date: body.trade_date || body.tradeDate || null,
-});
+const normalizeTradeBody = (body = {}, includeMissing = false) => {
+  const pairs = [
+    ["strategy", ["strategy"]],
+    ["entry", ["entry"]],
+    ["reason", ["reason"]],
+    ["tp", ["tp"]],
+    ["sl", ["sl"]],
+    ["result", ["result"]],
+    ["learning", ["learning"]],
+    ["asset_pair", ["asset_pair", "assetPair"]],
+    ["rr", ["rr"]],
+    ["session", ["session"]],
+    ["screenshot_url", ["screenshot_url", "screenshot"]],
+    ["after_trade_screenshot_url", ["after_trade_screenshot_url", "afterTradeScreenshot"]],
+    ["trade_date", ["trade_date", "tradeDate"]],
+  ];
+  return pairs.reduce((acc, [column, keys]) => {
+    const key = keys.find((k) => Object.prototype.hasOwnProperty.call(body, k));
+    if (key || includeMissing) acc[column] = key ? (body[key] || null) : null;
+    return acc;
+  }, {});
+};
 
 app.get("/api/trades", async (_req, res) => {
   try {
@@ -140,7 +147,7 @@ app.get("/api/trades/:id", async (req, res) => {
 
 app.post("/api/trades", async (req, res) => {
   try {
-    const b = normalizeTradeBody(req.body);
+    const b = normalizeTradeBody(req.body, true);
     const { rows } = await query(
       `INSERT INTO trades (strategy, entry, reason, tp, sl, result, learning, asset_pair, rr, session, screenshot_url, after_trade_screenshot_url, trade_date)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
