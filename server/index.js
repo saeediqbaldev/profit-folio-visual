@@ -284,6 +284,7 @@ app.delete("/api/trades/:id", async (req, res) => {
 // ---------- Activity logs ----------
 app.get("/api/activity-logs", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 100");
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -292,6 +293,7 @@ app.get("/api/activity-logs", async (_req, res) => {
 // ---------- Admin stats ----------
 app.get("/api/admin/stats", async (_req, res) => {
   try {
+    await ensureSchema();
     const t = await query("SELECT COUNT(*)::int AS c FROM trades");
     let bytes = 0;
     try {
@@ -306,6 +308,7 @@ app.get("/api/admin/stats", async (_req, res) => {
 // ---------- Public share ----------
 app.get("/api/public/trades", async (_req, res) => {
   try {
+    await ensureSchema();
     const prof = (await query("SELECT share_enabled FROM profile WHERE id='admin'")).rows[0];
     if (!prof?.share_enabled) return res.json([]);
     const { rows } = await query(
@@ -348,6 +351,7 @@ function dirSizeBytes(dir) {
 
 app.get("/api/system/stats", async (_req, res) => {
   try {
+    await ensureSchema();
     const t = await query("SELECT COUNT(*)::int AS c FROM trades");
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
@@ -380,6 +384,7 @@ app.get("/api/system/stats", async (_req, res) => {
 
 app.get("/api/system/timeline", async (req, res) => {
   try {
+    await ensureSchema();
     const days = Math.max(1, Math.min(365, parseInt(String(req.query.days || "7"), 10) || 7));
     const { rows } = await query(
       `SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
@@ -404,5 +409,6 @@ if (fs.existsSync(STATIC_DIR)) {
 
 // ---------- Startup ----------
 init()
+  .then(() => ensureSchema())
   .then(() => app.listen(PORT, () => console.log(`Server on :${PORT}`)))
   .catch((e) => { console.error("Init failed:", e); process.exit(1); });
