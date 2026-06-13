@@ -24,7 +24,11 @@ interface Trade {
   reason?: string | null;
 }
 
-const TradingOverviewPage = () => {
+interface TradingOverviewPageProps {
+  initialSelectedDate?: string | null;
+}
+
+const TradingOverviewPage = ({ initialSelectedDate }: TradingOverviewPageProps) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStrategy, setSelectedStrategy] = useState<string>("all");
@@ -102,6 +106,13 @@ const TradingOverviewPage = () => {
     });
     setDayModal({ date, trades: dayTrades });
   };
+
+  useEffect(() => {
+    if (!initialSelectedDate || loading) return;
+    const date = new Date(`${initialSelectedDate}T00:00:00`);
+    if (!Number.isNaN(date.getTime())) handleDayClick(date);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedDate, loading]);
 
   if (loading) {
     return (
@@ -244,8 +255,9 @@ const TradingOverviewPage = () => {
                     type="button"
                     key={t.id}
                     onClick={() => {
+                      const returnDate = format(dayModal.date, "yyyy-MM-dd");
                       setDayModal(null);
-                      try { window.dispatchEvent(new CustomEvent("open-trade", { detail: t.id })); } catch { /* noop */ }
+                      try { window.dispatchEvent(new CustomEvent("open-trade", { detail: { id: t.id, returnPage: "overview", returnDate } })); } catch { /* noop */ }
                     }}
                     className="w-full flex items-center justify-between p-3 border border-border/50 rounded-lg hover:bg-muted/30 hover:border-primary/40 transition text-left"
                   >
