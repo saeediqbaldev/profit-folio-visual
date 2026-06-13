@@ -150,6 +150,7 @@ app.post("/api/auth/login", (req, res) => {
 // ---------- Profile (single row, id='admin') ----------
 app.get("/api/profile", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM profile WHERE id = 'admin'");
     res.json(rows[0] || null);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -157,7 +158,8 @@ app.get("/api/profile", async (_req, res) => {
 
 app.put("/api/profile", async (req, res) => {
   try {
-    const allowed = ["full_name", "email", "phone", "username", "avatar_url", "share_enabled"];
+    await ensureSchema();
+    const allowed = ["full_name", "email", "phone", "username", "avatar_url", "share_enabled", "theme_settings"];
     const sets = [];
     const vals = [];
     let i = 1;
@@ -174,6 +176,7 @@ app.put("/api/profile", async (req, res) => {
 // ---------- Strategies ----------
 app.get("/api/strategies", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT strategies FROM profile WHERE id = 'admin'");
     res.json({ strategies: rows[0]?.strategies || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -181,6 +184,7 @@ app.get("/api/strategies", async (_req, res) => {
 
 app.put("/api/strategies", async (req, res) => {
   try {
+    await ensureSchema();
     const list = Array.isArray(req.body?.strategies) ? req.body.strategies : [];
     await query("UPDATE profile SET strategies = $1, updated_at = NOW() WHERE id = 'admin'", [list]);
     res.json({ ok: true });
@@ -218,6 +222,7 @@ const normalizeTradeBody = (body = {}, includeMissing = false) => {
 
 app.get("/api/trades", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM trades ORDER BY created_at DESC");
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -225,6 +230,7 @@ app.get("/api/trades", async (_req, res) => {
 
 app.get("/api/trades/:id", async (req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM trades WHERE id = $1", [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: "Not found" });
     res.json(rows[0]);
@@ -233,6 +239,7 @@ app.get("/api/trades/:id", async (req, res) => {
 
 app.post("/api/trades", async (req, res) => {
   try {
+    await ensureSchema();
     const b = normalizeTradeBody(req.body, true);
     const { rows } = await query(
       `INSERT INTO trades (strategy, entry, reason, tp, sl, result, learning, asset_pair, rr, session, screenshot_url, after_trade_screenshot_url, trade_date)
@@ -249,6 +256,7 @@ app.post("/api/trades", async (req, res) => {
 
 app.put("/api/trades/:id", async (req, res) => {
   try {
+    await ensureSchema();
     const b = normalizeTradeBody(req.body);
     const sets = []; const vals = []; let i = 1;
     for (const f of TRADE_FIELDS) if (f in b) { sets.push(`${f}=$${i++}`); vals.push(b[f]); }
@@ -266,6 +274,7 @@ app.put("/api/trades/:id", async (req, res) => {
 
 app.delete("/api/trades/:id", async (req, res) => {
   try {
+    await ensureSchema();
     await query("DELETE FROM trades WHERE id = $1", [req.params.id]);
     logActivity("TRADE_DELETE", `Forex trade ${req.params.id}`);
     res.json({ ok: true });
