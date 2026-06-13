@@ -32,7 +32,11 @@ export const useAuth = () => {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "1") notify(ADMIN_USER);
+      if (stored === "1") {
+        currentUser = ADMIN_USER;
+        setUser(ADMIN_USER);
+        notify(ADMIN_USER);
+      }
     } catch {
       /* ignore */
     }
