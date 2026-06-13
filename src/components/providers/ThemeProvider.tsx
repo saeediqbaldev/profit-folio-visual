@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
+import { applyThemeSettings, defaultThemeSettings, mergeThemeSettings, THEME_SETTINGS_EVENT, THEME_STORAGE_KEY, ThemeSettings } from "@/lib/theme"
 
 type Theme = "dark" | "light" | "system"
 
@@ -29,6 +30,13 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
+  const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
+    try {
+      return mergeThemeSettings(JSON.parse(localStorage.getItem(THEME_STORAGE_KEY) || "null"))
+    } catch {
+      return defaultThemeSettings
+    }
+  })
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -42,11 +50,21 @@ export function ThemeProvider({
         : "light"
 
       root.classList.add(systemTheme)
+      applyThemeSettings(themeSettings, systemTheme)
       return
     }
 
     root.classList.add(theme)
-  }, [theme])
+    applyThemeSettings(themeSettings, theme)
+  }, [theme, themeSettings])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      setThemeSettings(mergeThemeSettings((event as CustomEvent).detail))
+    }
+    window.addEventListener(THEME_SETTINGS_EVENT, handler)
+    return () => window.removeEventListener(THEME_SETTINGS_EVENT, handler)
+  }, [])
 
   const value = {
     theme,

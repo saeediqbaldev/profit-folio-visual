@@ -51,6 +51,92 @@ async function logActivity(action, details) {
   }
 }
 
+// ---------- Runtime schema guard ----------
+// Existing Coolify volumes keep old tables. This guard makes every start and
+// trade/profile request self-heal missing columns before the app reads/writes.
+let schemaReadyPromise = null;
+
+async function ensureRuntimeSchema() {
+  await query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+  await query(`CREATE TABLE IF NOT EXISTS profile (
+    id TEXT PRIMARY KEY,
+    full_name TEXT,
+    email TEXT,
+    phone TEXT,
+    username TEXT,
+    avatar_url TEXT,
+    share_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    strategies TEXT[] NOT NULL DEFAULT ARRAY['Strategy 1','Strategy 2','Strategy 3'],
+    theme_settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await query(`INSERT INTO profile (id, full_name, username, email)
+    VALUES ('admin', 'Admin', 'Saeeddev', 'admin@local') ON CONFLICT (id) DO NOTHING`);
+  const profileColumns = [
+    ["full_name", "TEXT"], ["email", "TEXT"], ["phone", "TEXT"], ["username", "TEXT"],
+    ["avatar_url", "TEXT"], ["share_enabled", "BOOLEAN NOT NULL DEFAULT FALSE"],
+    ["strategies", "TEXT[] NOT NULL DEFAULT ARRAY['Strategy 1','Strategy 2','Strategy 3']"],
+    ["theme_settings", "JSONB NOT NULL DEFAULT '{}'::jsonb"],
+    ["created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"], ["updated_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"],
+  ];
+  for (const [name, definition] of profileColumns) {
+    await query(`ALTER TABLE profile ADD COLUMN IF NOT EXISTS ${name} ${definition}`);
+  }
+
+  await query(`CREATE TABLE IF NOT EXISTS trades (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sno INTEGER,
+    strategy TEXT,
+    entry TEXT,
+    reason TEXT,
+    tp TEXT,
+    sl TEXT,
+    result TEXT,
+    learning TEXT,
+    asset_pair TEXT,
+    rr TEXT,
+    "session" TEXT,
+    screenshot_url TEXT,
+    after_trade_screenshot_url TEXT,
+    trade_date DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  const tradeColumns = [
+    ["sno", "INTEGER"], ["strategy", "TEXT"], ["entry", "TEXT"], ["reason", "TEXT"],
+    ["tp", "TEXT"], ["sl", "TEXT"], ["result", "TEXT"], ["learning", "TEXT"],
+    ["asset_pair", "TEXT"], ["rr", "TEXT"], ["session", "TEXT"], ["screenshot_url", "TEXT"],
+    ["after_trade_screenshot_url", "TEXT"], ["trade_date", "DATE"],
+    ["created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"],
+  ];
+  for (const [name, definition] of tradeColumns) {
+    await query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS "${name}" ${definition}`);
+  }
+  await query("CREATE SEQUENCE IF NOT EXISTS trades_sno_seq OWNED BY trades.sno");
+  await query("ALTER TABLE trades ALTER COLUMN sno SET DEFAULT nextval('trades_sno_seq')");
+  await query("UPDATE trades SET sno = nextval('trades_sno_seq') WHERE sno IS NULL");
+  await query("SELECT setval('trades_sno_seq', GREATEST((SELECT COALESCE(MAX(sno), 0) FROM trades), 1), (SELECT COALESCE(MAX(sno), 0) FROM trades) > 0)");
+  await query("CREATE INDEX IF NOT EXISTS idx_trades_created_at ON trades(created_at DESC)");
+
+  await query(`CREATE TABLE IF NOT EXISTS activity_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    action TEXT NOT NULL,
+    details TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await query("CREATE INDEX IF NOT EXISTS idx_activity_created_at ON activity_logs(created_at DESC)");
+}
+
+async function ensureSchema() {
+  if (!schemaReadyPromise) {
+    schemaReadyPromise = ensureRuntimeSchema().catch((e) => {
+      schemaReadyPromise = null;
+      throw e;
+    });
+  }
+  return schemaReadyPromise;
+}
+
 // ---------- Auth (frontend hardcoded; this is a stub) ----------
 app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body || {};
@@ -64,6 +150,7 @@ app.post("/api/auth/login", (req, res) => {
 // ---------- Profile (single row, id='admin') ----------
 app.get("/api/profile", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM profile WHERE id = 'admin'");
     res.json(rows[0] || null);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -71,7 +158,8 @@ app.get("/api/profile", async (_req, res) => {
 
 app.put("/api/profile", async (req, res) => {
   try {
-    const allowed = ["full_name", "email", "phone", "username", "avatar_url", "share_enabled"];
+    await ensureSchema();
+    const allowed = ["full_name", "email", "phone", "username", "avatar_url", "share_enabled", "theme_settings"];
     const sets = [];
     const vals = [];
     let i = 1;
@@ -88,6 +176,7 @@ app.put("/api/profile", async (req, res) => {
 // ---------- Strategies ----------
 app.get("/api/strategies", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT strategies FROM profile WHERE id = 'admin'");
     res.json({ strategies: rows[0]?.strategies || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -95,6 +184,7 @@ app.get("/api/strategies", async (_req, res) => {
 
 app.put("/api/strategies", async (req, res) => {
   try {
+    await ensureSchema();
     const list = Array.isArray(req.body?.strategies) ? req.body.strategies : [];
     await query("UPDATE profile SET strategies = $1, updated_at = NOW() WHERE id = 'admin'", [list]);
     res.json({ ok: true });
@@ -132,6 +222,7 @@ const normalizeTradeBody = (body = {}, includeMissing = false) => {
 
 app.get("/api/trades", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM trades ORDER BY created_at DESC");
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -139,6 +230,7 @@ app.get("/api/trades", async (_req, res) => {
 
 app.get("/api/trades/:id", async (req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM trades WHERE id = $1", [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: "Not found" });
     res.json(rows[0]);
@@ -147,6 +239,7 @@ app.get("/api/trades/:id", async (req, res) => {
 
 app.post("/api/trades", async (req, res) => {
   try {
+    await ensureSchema();
     const b = normalizeTradeBody(req.body, true);
     const { rows } = await query(
       `INSERT INTO trades (strategy, entry, reason, tp, sl, result, learning, asset_pair, rr, session, screenshot_url, after_trade_screenshot_url, trade_date)
@@ -163,6 +256,7 @@ app.post("/api/trades", async (req, res) => {
 
 app.put("/api/trades/:id", async (req, res) => {
   try {
+    await ensureSchema();
     const b = normalizeTradeBody(req.body);
     const sets = []; const vals = []; let i = 1;
     for (const f of TRADE_FIELDS) if (f in b) { sets.push(`${f}=$${i++}`); vals.push(b[f]); }
@@ -180,6 +274,7 @@ app.put("/api/trades/:id", async (req, res) => {
 
 app.delete("/api/trades/:id", async (req, res) => {
   try {
+    await ensureSchema();
     await query("DELETE FROM trades WHERE id = $1", [req.params.id]);
     logActivity("TRADE_DELETE", `Forex trade ${req.params.id}`);
     res.json({ ok: true });
@@ -189,6 +284,7 @@ app.delete("/api/trades/:id", async (req, res) => {
 // ---------- Activity logs ----------
 app.get("/api/activity-logs", async (_req, res) => {
   try {
+    await ensureSchema();
     const { rows } = await query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 100");
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -197,6 +293,7 @@ app.get("/api/activity-logs", async (_req, res) => {
 // ---------- Admin stats ----------
 app.get("/api/admin/stats", async (_req, res) => {
   try {
+    await ensureSchema();
     const t = await query("SELECT COUNT(*)::int AS c FROM trades");
     let bytes = 0;
     try {
@@ -211,6 +308,7 @@ app.get("/api/admin/stats", async (_req, res) => {
 // ---------- Public share ----------
 app.get("/api/public/trades", async (_req, res) => {
   try {
+    await ensureSchema();
     const prof = (await query("SELECT share_enabled FROM profile WHERE id='admin'")).rows[0];
     if (!prof?.share_enabled) return res.json([]);
     const { rows } = await query(
@@ -253,6 +351,7 @@ function dirSizeBytes(dir) {
 
 app.get("/api/system/stats", async (_req, res) => {
   try {
+    await ensureSchema();
     const t = await query("SELECT COUNT(*)::int AS c FROM trades");
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
@@ -285,6 +384,7 @@ app.get("/api/system/stats", async (_req, res) => {
 
 app.get("/api/system/timeline", async (req, res) => {
   try {
+    await ensureSchema();
     const days = Math.max(1, Math.min(365, parseInt(String(req.query.days || "7"), 10) || 7));
     const { rows } = await query(
       `SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
@@ -309,5 +409,6 @@ if (fs.existsSync(STATIC_DIR)) {
 
 // ---------- Startup ----------
 init()
+  .then(() => ensureSchema())
   .then(() => app.listen(PORT, () => console.log(`Server on :${PORT}`)))
   .catch((e) => { console.error("Init failed:", e); process.exit(1); });

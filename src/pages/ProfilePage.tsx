@@ -12,7 +12,9 @@ import { useStrategies } from "@/hooks/useStrategies";
 import { api } from "@/lib/api";
 import ProfileUpload from "@/components/profile/ProfileUpload";
 import ResourceUsage from "@/components/profile/ResourceUsage";
+import ColorThemeSettings from "@/components/profile/ColorThemeSettings";
 import CandleLoader from "@/components/ui/candle-loader";
+import { mergeThemeSettings, PartialThemeSettings, persistThemeSettings } from "@/lib/theme";
 
 interface Profile {
   id: string;
@@ -22,6 +24,7 @@ interface Profile {
   username: string | null;
   phone: string | null;
   share_enabled: boolean;
+  theme_settings?: PartialThemeSettings | null;
 }
 
 const ProfilePage = () => {
@@ -51,6 +54,7 @@ const ProfilePage = () => {
           username: data.username || "",
         });
         setShareEnabled(!!data.share_enabled);
+        persistThemeSettings(mergeThemeSettings(data.theme_settings));
       }
     } catch (e) {
       console.error(e);
@@ -161,6 +165,8 @@ const ProfilePage = () => {
             <p className="text-xs text-muted-foreground">{strategies.length} of {maxStrategies} used</p>
           </CardContent>
         </Card>
+
+        <ColorThemeSettings initialSettings={profile?.theme_settings} />
 
         <Card className="shadow-card border-border/50">
           <CardHeader><CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5" />Public Sharing</CardTitle></CardHeader>

@@ -20,6 +20,8 @@ import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import CandleLoader from "@/components/ui/candle-loader";
+import { api } from "@/lib/api";
+import { mergeThemeSettings, persistThemeSettings } from "@/lib/theme";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,8 @@ const App = () => {
   const { isAdmin } = useUserRole();
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
+  const [tradeReturnPage, setTradeReturnPage] = useState("history");
+  const [overviewReturnDate, setOverviewReturnDate] = useState<string | null>(null);
   const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
@@ -37,11 +41,19 @@ const App = () => {
     }
   }, [isAuthenticated]);
 
-  // Ensure stats page is the home page when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      setCurrentPage((p) => (p === "dashboard" || p === "history" || p === "overview" || p === "journal" || p === "profile" || p === "admin" || p === "trade" ? p : "dashboard"));
+      setCurrentPage("dashboard");
     }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api.get<any>("/api/profile")
+      .then((profile) => {
+        if (profile?.theme_settings) persistThemeSettings(mergeThemeSettings(profile.theme_settings));
+      })
+      .catch(() => { /* keep local theme if backend is temporarily unavailable */ });
   }, [isAuthenticated]);
 
   const handleLogout = async () => {
@@ -55,18 +67,30 @@ const App = () => {
     setCurrentPage(page);
     if (page !== "trade") {
       setSelectedTradeId(null);
+      setOverviewReturnDate(null);
     }
   };
 
-  const handleViewTrade = (tradeId: string) => {
+  const handleTradeBack = () => {
+    setSelectedTradeId(null);
+    setCurrentPage(tradeReturnPage);
+    if (tradeReturnPage !== "overview") setOverviewReturnDate(null);
+  };
+
+  const handleViewTrade = (tradeId: string, returnPage = "history", returnDate?: string | null) => {
     setSelectedTradeId(tradeId);
+    setTradeReturnPage(returnPage);
+    if (returnDate) setOverviewReturnDate(returnDate);
     setCurrentPage("trade");
   };
 
   useEffect(() => {
     const onOpenTrade = (e: Event) => {
-      const id = (e as CustomEvent).detail;
-      if (typeof id === "string" && id) handleViewTrade(id);
+      const detail = (e as CustomEvent).detail;
+      const id = typeof detail === "string" ? detail : detail?.id;
+      const returnPage = typeof detail === "object" && detail?.returnPage ? detail.returnPage : "history";
+      const returnDate = typeof detail === "object" ? detail?.returnDate : null;
+      if (typeof id === "string" && id) handleViewTrade(id, returnPage, returnDate);
     };
     window.addEventListener("open-trade", onOpenTrade);
     return () => window.removeEventListener("open-trade", onOpenTrade);
@@ -146,11 +170,11 @@ const App = () => {
                   {currentPage === "journal" && <JournalPage />}
                   {currentPage === "dashboard" && <DashboardPage />}
                   {currentPage === "history" && <TradingHistoryPage onViewTrade={handleViewTrade} />}
-                  {currentPage === "overview" && <TradingOverviewPage />}
+                  {currentPage === "overview" && <TradingOverviewPage initialSelectedDate={overviewReturnDate} />}
                   {currentPage === "profile" && <ProfilePage />}
                   {currentPage === "admin" && <AdminPage />}
                   {currentPage === "trade" && selectedTradeId && (
-                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate("history")} viewOnly={true} />
+                    <TradePage tradeId={selectedTradeId} onBack={handleTradeBack} viewOnly={true} />
                   )}
                 </main>
               </div>
