@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS profile (
   avatar_url TEXT,
   share_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   strategies TEXT[] NOT NULL DEFAULT ARRAY['Strategy 1','Strategy 2','Strategy 3'],
+  theme_settings JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -24,6 +25,7 @@ ALTER TABLE profile ADD COLUMN IF NOT EXISTS username TEXT;
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS share_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS strategies TEXT[] NOT NULL DEFAULT ARRAY['Strategy 1','Strategy 2','Strategy 3'];
+ALTER TABLE profile ADD COLUMN IF NOT EXISTS theme_settings JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -67,6 +69,10 @@ ALTER TABLE trades ADD COLUMN IF NOT EXISTS screenshot_url TEXT;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS after_trade_screenshot_url TEXT;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS trade_date DATE;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE SEQUENCE IF NOT EXISTS trades_sno_seq OWNED BY trades.sno;
+ALTER TABLE trades ALTER COLUMN sno SET DEFAULT nextval('trades_sno_seq');
+UPDATE trades SET sno = nextval('trades_sno_seq') WHERE sno IS NULL;
+SELECT setval('trades_sno_seq', GREATEST((SELECT COALESCE(MAX(sno), 0) FROM trades), 1), (SELECT COALESCE(MAX(sno), 0) FROM trades) > 0);
 CREATE INDEX IF NOT EXISTS idx_trades_created_at ON trades(created_at DESC);
 
 -- Drop legacy PSX table if present
