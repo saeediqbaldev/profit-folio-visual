@@ -14,7 +14,7 @@ import ProfileUpload from "@/components/profile/ProfileUpload";
 import ResourceUsage from "@/components/profile/ResourceUsage";
 import ColorThemeSettings from "@/components/profile/ColorThemeSettings";
 import CandleLoader from "@/components/ui/candle-loader";
-import { mergeThemeSettings, persistThemeSettings, ThemeSettings } from "@/lib/theme";
+import { mergeThemeSettings, PartialThemeSettings, persistThemeSettings } from "@/lib/theme";
 
 interface Profile {
   id: string;
@@ -24,7 +24,7 @@ interface Profile {
   username: string | null;
   phone: string | null;
   share_enabled: boolean;
-  theme_settings?: Partial<ThemeSettings> | null;
+  theme_settings?: PartialThemeSettings | null;
 }
 
 const ProfilePage = () => {

@@ -11,6 +11,7 @@ import {
   applyThemeSettings,
   defaultThemeSettings,
   mergeThemeSettings,
+  PartialThemeSettings,
   persistThemeSettings,
   ThemeModeSettings,
   ThemeSettings,
@@ -63,7 +64,7 @@ const presets: Array<{ name: string; settings: ThemeSettings }> = [
 ];
 
 interface ColorThemeSettingsProps {
-  initialSettings?: Partial<ThemeSettings> | null;
+  initialSettings?: PartialThemeSettings | null;
 }
 
 const ColorThemeSettings = ({ initialSettings }: ColorThemeSettingsProps) => {
