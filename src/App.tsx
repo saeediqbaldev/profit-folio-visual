@@ -56,10 +56,14 @@ const App = () => {
     setCurrentPage(page);
     if (page !== "trade") {
       setSelectedTradeId(null);
-    }
-    if (page !== "overview" && page !== "trade") {
       setOverviewReturnDate(null);
     }
+  };
+
+  const handleTradeBack = () => {
+    setSelectedTradeId(null);
+    setCurrentPage(tradeReturnPage);
+    if (tradeReturnPage !== "overview") setOverviewReturnDate(null);
   };
 
   const handleViewTrade = (tradeId: string, returnPage = "history", returnDate?: string | null) => {
@@ -159,7 +163,7 @@ const App = () => {
                   {currentPage === "profile" && <ProfilePage />}
                   {currentPage === "admin" && <AdminPage />}
                   {currentPage === "trade" && selectedTradeId && (
-                    <TradePage tradeId={selectedTradeId} onBack={() => handleNavigate(tradeReturnPage)} viewOnly={true} />
+                    <TradePage tradeId={selectedTradeId} onBack={handleTradeBack} viewOnly={true} />
                   )}
                 </main>
               </div>
