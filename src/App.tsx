@@ -20,6 +20,8 @@ import Lightbox from "@/components/ui/lightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import CandleLoader from "@/components/ui/candle-loader";
+import { api } from "@/lib/api";
+import { mergeThemeSettings, persistThemeSettings } from "@/lib/theme";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,15 @@ const App = () => {
     if (isAuthenticated) {
       setCurrentPage("dashboard");
     }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api.get<any>("/api/profile")
+      .then((profile) => {
+        if (profile?.theme_settings) persistThemeSettings(mergeThemeSettings(profile.theme_settings));
+      })
+      .catch(() => { /* keep local theme if backend is temporarily unavailable */ });
   }, [isAuthenticated]);
 
   const handleLogout = async () => {
