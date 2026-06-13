@@ -51,6 +51,92 @@ async function logActivity(action, details) {
   }
 }
 
+// ---------- Runtime schema guard ----------
+// Existing Coolify volumes keep old tables. This guard makes every start and
+// trade/profile request self-heal missing columns before the app reads/writes.
+let schemaReadyPromise = null;
+
+async function ensureRuntimeSchema() {
+  await query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+  await query(`CREATE TABLE IF NOT EXISTS profile (
+    id TEXT PRIMARY KEY,
+    full_name TEXT,
+    email TEXT,
+    phone TEXT,
+    username TEXT,
+    avatar_url TEXT,
+    share_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    strategies TEXT[] NOT NULL DEFAULT ARRAY['Strategy 1','Strategy 2','Strategy 3'],
+    theme_settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await query(`INSERT INTO profile (id, full_name, username, email)
+    VALUES ('admin', 'Admin', 'Saeeddev', 'admin@local') ON CONFLICT (id) DO NOTHING`);
+  const profileColumns = [
+    ["full_name", "TEXT"], ["email", "TEXT"], ["phone", "TEXT"], ["username", "TEXT"],
+    ["avatar_url", "TEXT"], ["share_enabled", "BOOLEAN NOT NULL DEFAULT FALSE"],
+    ["strategies", "TEXT[] NOT NULL DEFAULT ARRAY['Strategy 1','Strategy 2','Strategy 3']"],
+    ["theme_settings", "JSONB NOT NULL DEFAULT '{}'::jsonb"],
+    ["created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"], ["updated_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"],
+  ];
+  for (const [name, definition] of profileColumns) {
+    await query(`ALTER TABLE profile ADD COLUMN IF NOT EXISTS ${name} ${definition}`);
+  }
+
+  await query(`CREATE TABLE IF NOT EXISTS trades (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sno INTEGER,
+    strategy TEXT,
+    entry TEXT,
+    reason TEXT,
+    tp TEXT,
+    sl TEXT,
+    result TEXT,
+    learning TEXT,
+    asset_pair TEXT,
+    rr TEXT,
+    "session" TEXT,
+    screenshot_url TEXT,
+    after_trade_screenshot_url TEXT,
+    trade_date DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  const tradeColumns = [
+    ["sno", "INTEGER"], ["strategy", "TEXT"], ["entry", "TEXT"], ["reason", "TEXT"],
+    ["tp", "TEXT"], ["sl", "TEXT"], ["result", "TEXT"], ["learning", "TEXT"],
+    ["asset_pair", "TEXT"], ["rr", "TEXT"], ["session", "TEXT"], ["screenshot_url", "TEXT"],
+    ["after_trade_screenshot_url", "TEXT"], ["trade_date", "DATE"],
+    ["created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"],
+  ];
+  for (const [name, definition] of tradeColumns) {
+    await query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS "${name}" ${definition}`);
+  }
+  await query("CREATE SEQUENCE IF NOT EXISTS trades_sno_seq OWNED BY trades.sno");
+  await query("ALTER TABLE trades ALTER COLUMN sno SET DEFAULT nextval('trades_sno_seq')");
+  await query("UPDATE trades SET sno = nextval('trades_sno_seq') WHERE sno IS NULL");
+  await query("SELECT setval('trades_sno_seq', GREATEST((SELECT COALESCE(MAX(sno), 0) FROM trades), 1), (SELECT COALESCE(MAX(sno), 0) FROM trades) > 0)");
+  await query("CREATE INDEX IF NOT EXISTS idx_trades_created_at ON trades(created_at DESC)");
+
+  await query(`CREATE TABLE IF NOT EXISTS activity_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    action TEXT NOT NULL,
+    details TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await query("CREATE INDEX IF NOT EXISTS idx_activity_created_at ON activity_logs(created_at DESC)");
+}
+
+async function ensureSchema() {
+  if (!schemaReadyPromise) {
+    schemaReadyPromise = ensureRuntimeSchema().catch((e) => {
+      schemaReadyPromise = null;
+      throw e;
+    });
+  }
+  return schemaReadyPromise;
+}
+
 // ---------- Auth (frontend hardcoded; this is a stub) ----------
 app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body || {};
