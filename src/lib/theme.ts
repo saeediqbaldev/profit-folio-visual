@@ -22,6 +22,11 @@ export type ThemeSettings = {
   dark: ThemeModeSettings;
 };
 
+export type PartialThemeSettings = {
+  light?: Partial<ThemeModeSettings>;
+  dark?: Partial<ThemeModeSettings>;
+};
+
 export const THEME_STORAGE_KEY = "tj-theme-settings";
 export const THEME_SETTINGS_EVENT = "theme-settings-updated";
 
@@ -83,7 +88,7 @@ const tokenMap: Record<keyof ThemeModeSettings, string> = {
   sidebarAccent: "--sidebar-accent",
 };
 
-export const mergeThemeSettings = (settings?: Partial<ThemeSettings> | null): ThemeSettings => ({
+export const mergeThemeSettings = (settings?: PartialThemeSettings | null): ThemeSettings => ({
   light: { ...defaultThemeSettings.light, ...(settings?.light || {}) },
   dark: { ...defaultThemeSettings.dark, ...(settings?.dark || {}) },
 });
