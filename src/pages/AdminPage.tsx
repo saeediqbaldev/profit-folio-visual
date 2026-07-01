@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useUserRole } from "@/hooks/useUserRole";
 import CandleLoader from "@/components/ui/candle-loader";
 import ActivityLogs from "@/components/profile/ActivityLogs";
+import MembersManager from "@/components/admin/MembersManager";
 
 interface AdminStats {
   totalTrades: number;
@@ -102,6 +103,7 @@ const AdminPage = () => {
           </CardContent>
         </Card>
 
+        <MembersManager />
         <ActivityLogs />
       </div>
     </div>
