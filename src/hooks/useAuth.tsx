@@ -1,21 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-
-// Hardcoded single admin user. Auth is checked only on the frontend.
-const ADMIN_USERNAME = "Saeeddev";
-const ADMIN_PASSWORD = "Saeed@@2026&&";
-const STORAGE_KEY = "tj-admin-auth";
+import { api } from "@/lib/api";
 
 export interface User {
   id: string;
   username: string;
-  email: string;
+  email: string | null;
+  full_name?: string | null;
+  role: "admin" | "trader";
+  avatar_url?: string | null;
 }
-
-const ADMIN_USER: User = {
-  id: "admin",
-  username: ADMIN_USERNAME,
-  email: "admin@local",
-};
 
 let currentUser: User | null = null;
 const subscribers = new Set<(user: User | null) => void>();
@@ -30,17 +23,18 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "1") {
-        currentUser = ADMIN_USER;
-        setUser(ADMIN_USER);
-        notify(ADMIN_USER);
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await api.get<User>("/api/auth/me");
+        if (!cancelled) { notify(me); }
+      } catch {
+        if (!cancelled) notify(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {
-      /* ignore */
-    }
-    setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -48,20 +42,18 @@ export const useAuth = () => {
     return () => { subscribers.delete(setUser); };
   }, []);
 
-  const signIn = useCallback(
-    async (username: string, password: string): Promise<boolean> => {
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        localStorage.setItem(STORAGE_KEY, "1");
-        notify(ADMIN_USER);
-        return true;
-      }
+  const signIn = useCallback(async (username: string, password: string): Promise<boolean> => {
+    try {
+      const u = await api.post<User>("/api/auth/login", { username, password });
+      notify(u);
+      return true;
+    } catch {
       return false;
-    },
-    []
-  );
+    }
+  }, []);
 
   const signOut = useCallback(async () => {
-    localStorage.removeItem(STORAGE_KEY);
+    try { await api.post("/api/auth/logout"); } catch { /* ignore */ }
     notify(null);
   }, []);
 

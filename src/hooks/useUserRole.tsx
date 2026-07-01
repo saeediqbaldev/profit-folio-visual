@@ -1,13 +1,14 @@
 import { useAuth } from "./useAuth";
 
-// Single hardcoded admin user — always admin when logged in.
 export const useUserRole = () => {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const role = user?.role || null;
+  const isAdmin = isAuthenticated && role === "admin";
   return {
-    role: isAuthenticated ? ("admin" as const) : null,
+    role,
     loading: false,
-    isAdmin: isAuthenticated,
-    isModerator: isAuthenticated,
+    isAdmin,
+    isModerator: isAdmin,
     isUser: isAuthenticated,
   };
 };
