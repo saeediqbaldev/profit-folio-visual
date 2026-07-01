@@ -1,4 +1,4 @@
-import { PenTool, LayoutDashboard, Calendar, User, TrendingUp, X, History } from "lucide-react";
+import { PenTool, LayoutDashboard, Calendar, User, TrendingUp, X, History, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,7 +19,7 @@ interface AppSidebarProps {
   isAdmin: boolean;
 }
 
-export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
+export function AppSidebar({ currentPage, onNavigate, isAdmin }: AppSidebarProps) {
   const { setOpenMobile, isMobile } = useSidebar();
 
   const navigation = [
@@ -31,6 +31,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
 
   const accountNavigation = [
     { id: "profile", label: "Profile", icon: User },
+    ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Shield }] : []),
   ];
 
   const handleNavigate = (page: string) => {

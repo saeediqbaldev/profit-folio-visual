@@ -78,6 +78,7 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
   };
 
   const [uploadingField, setUploadingField] = useState<null | 'screenshot' | 'afterTradeScreenshot'>(null);
+  const [uploadPercent, setUploadPercent] = useState<Record<string, number>>({});
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>, field: 'screenshot' | 'afterTradeScreenshot') => {
     const file = e.target.files?.[0];
@@ -93,14 +94,16 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
       return;
     }
     setUploadingField(field);
+    setUploadPercent(p => ({ ...p, [field]: 0 }));
     try {
-      const { url } = await api.upload(file);
+      const { url } = await api.upload(file, ({ percent }) => setUploadPercent(p => ({ ...p, [field]: percent })));
       setFormData(prev => ({ ...prev, [field]: url }));
+      setUploadPercent(p => ({ ...p, [field]: 100 }));
     } catch {
       toast({ variant: "destructive", title: "Upload failed" });
     } finally {
       setUploadingField(null);
-      // reset input so same file can be reselected
+      setTimeout(() => setUploadPercent(p => ({ ...p, [field]: 0 })), 800);
       e.target.value = "";
     }
   };
@@ -257,6 +260,11 @@ const TradeForm = ({ onAddTrade }: TradeFormProps) => {
                     <span className="text-sm text-muted-foreground">PNG, JPG only</span>
                   </div>
                   <input id={`f-${field}`} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(e) => handleImage(e, field)} className="hidden" />
+                  {uploadingField === field && (
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-primary to-primary-glow transition-all" style={{ width: `${uploadPercent[field] || 0}%` }} />
+                    </div>
+                  )}
                   {formData[field] && (
                     <div className="relative inline-block">
                       <img src={formData[field] as string} alt="" className="max-w-full max-h-48 rounded-lg border border-border shadow-sm cursor-pointer hover:shadow-md"
