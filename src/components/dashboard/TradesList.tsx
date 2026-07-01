@@ -54,6 +54,7 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<Record<string, number>>({});
   const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
   const { strategies: userStrategies } = useStrategies();
@@ -72,21 +73,20 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
     if (!file) return;
     const MAX = 5 * 1024 * 1024;
     const ALLOWED = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!ALLOWED.includes(file.type)) {
-      toast({ variant: "destructive", title: "Invalid file type" }); return;
-    }
-    if (file.size > MAX) {
-      toast({ variant: "destructive", title: "File too large", description: "Max 5MB." }); return;
-    }
+    if (!ALLOWED.includes(file.type)) { toast({ variant: "destructive", title: "Invalid file type" }); return; }
+    if (file.size > MAX) { toast({ variant: "destructive", title: "File too large", description: "Max 5MB." }); return; }
     setUploading(true);
+    setUploadPercent(p => ({ ...p, [field]: 0 }));
     try {
-      const { url } = await api.upload(file);
+      const { url } = await api.upload(file, ({ percent }) => setUploadPercent(p => ({ ...p, [field]: percent })));
       setEditFormData(prev => prev ? { ...prev, [field]: url } : null);
       toast({ title: "Screenshot uploaded" });
     } catch {
       toast({ variant: "destructive", title: "Upload failed" });
     } finally {
       setUploading(false);
+      setTimeout(() => setUploadPercent(p => ({ ...p, [field]: 0 })), 800);
+      e.target.value = "";
     }
   }, [toast]);
 
