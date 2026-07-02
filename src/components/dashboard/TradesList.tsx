@@ -8,7 +8,8 @@ import { LineNumbersTextarea } from "@/components/ui/line-numbers-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Minus, Upload, X, CheckSquare, Square } from "lucide-react";
+import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Minus, Upload, X, CheckSquare, Square, FileDown, FileText } from "lucide-react";
+import { exportTradesCSV, exportTradesPDF } from "@/lib/exportTrades";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
