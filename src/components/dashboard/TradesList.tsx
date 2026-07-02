@@ -190,9 +190,15 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
             </div>
           )}
           {trades.length > 0 && (
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex flex-wrap items-center gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={allSelected ? deselectAllTrades : selectAllTrades}>
                 {allSelected ? (<><CheckSquare className="h-4 w-4 mr-1" />Deselect All</>) : (<><Square className="h-4 w-4 mr-1" />Select All</>)}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportTradesPDF(trades)}>
+                <FileText className="h-4 w-4 mr-1" />Export PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportTradesCSV(trades)}>
+                <FileDown className="h-4 w-4 mr-1" />Export CSV
               </Button>
             </div>
           )}
