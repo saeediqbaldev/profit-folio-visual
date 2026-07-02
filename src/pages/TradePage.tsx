@@ -46,7 +46,9 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState(0);
+  const [uploadPercent, setUploadPercent] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(!viewOnly);
+  const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { strategies } = useStrategies();
 
