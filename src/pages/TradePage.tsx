@@ -344,8 +344,15 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f, field); }} />
                     <label htmlFor={`upload-${field}`} className="cursor-pointer">
                       <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Click to upload</p>
+                      <p className="text-sm text-muted-foreground">
+                        {uploadPercent[field] > 0 && uploadPercent[field] < 100 ? `Uploading ${uploadPercent[field]}%` : "Click to upload"}
+                      </p>
                     </label>
+                    {uploadPercent[field] > 0 && uploadPercent[field] < 100 && (
+                      <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary transition-all" style={{ width: `${uploadPercent[field]}%` }} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center bg-muted">
