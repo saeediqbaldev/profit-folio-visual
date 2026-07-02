@@ -89,13 +89,16 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
     const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!ALLOWED.includes(file.type)) { toast({ variant: "destructive", title: "Invalid file type" }); return; }
     if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "File too large", description: "Max 5MB" }); return; }
+    setUploadPercent(p => ({ ...p, [field]: 1 }));
     try {
-      const { url } = await api.upload(file);
+      const { url } = await api.upload(file, ({ percent }) => setUploadPercent(p => ({ ...p, [field]: percent })));
       setTrade((p) => p ? { ...p, [field]: url } : null);
       toast({ title: "Screenshot uploaded" });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Upload failed" });
+    } finally {
+      setTimeout(() => setUploadPercent(p => ({ ...p, [field]: 0 })), 800);
     }
   }, [trade, isEditing, toast]);
 
