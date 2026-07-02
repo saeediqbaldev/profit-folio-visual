@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, X, Edit, Eye, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, Upload, X, Edit, Eye, TrendingUp, TrendingDown, Minus, Printer, FileImage, FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import CandleLoader from "@/components/ui/candle-loader";
@@ -14,6 +14,7 @@ import ProgressToast from "@/components/ui/progress-toast";
 import { ASSET_PAIRS, SESSIONS } from "@/components/journal/TradeForm";
 import { useStrategies } from "@/hooks/useStrategies";
 import { clearTradesCache } from "@/hooks/useTrades";
+import { printElementAsPDF, printElementAsPNG } from "@/lib/exportTrades";
 
 interface TradePageProps {
   tradeId: string;
@@ -45,7 +46,9 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState(0);
+  const [uploadPercent, setUploadPercent] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(!viewOnly);
+  const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { strategies } = useStrategies();
 
@@ -86,13 +89,16 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
     const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!ALLOWED.includes(file.type)) { toast({ variant: "destructive", title: "Invalid file type" }); return; }
     if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "File too large", description: "Max 5MB" }); return; }
+    setUploadPercent(p => ({ ...p, [field]: 1 }));
     try {
-      const { url } = await api.upload(file);
+      const { url } = await api.upload(file, ({ percent }) => setUploadPercent(p => ({ ...p, [field]: percent })));
       setTrade((p) => p ? { ...p, [field]: url } : null);
       toast({ title: "Screenshot uploaded" });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Upload failed" });
+    } finally {
+      setTimeout(() => setUploadPercent(p => ({ ...p, [field]: 0 })), 800);
     }
   }, [trade, isEditing, toast]);
 
@@ -196,7 +202,7 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <ProgressToast title="Saving trade..." progress={saveProgress} isVisible={saving || saveProgress > 0} />
       <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 print:hidden">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
             <div className="flex items-center gap-3">
@@ -207,14 +213,25 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
               {getResultBadge(trade.result)}
             </div>
           </div>
-          {!isEditing && (
-            <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
-              <Edit className="w-4 h-4" />Edit Trade
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1" />Print
             </Button>
-          )}
+            <Button variant="outline" size="sm" onClick={() => printRef.current && printElementAsPDF(printRef.current, `trade-${trade.sno || trade.id}.pdf`)}>
+              <FileText className="w-4 h-4 mr-1" />PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => printRef.current && printElementAsPNG(printRef.current, `trade-${trade.sno || trade.id}.png`)}>
+              <FileImage className="w-4 h-4 mr-1" />PNG
+            </Button>
+            {!isEditing && (
+              <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+                <Edit className="w-4 h-4" />Edit Trade
+              </Button>
+            )}
+          </div>
         </div>
 
-        <Card className="p-6 space-y-6">
+        <Card className="p-6 space-y-6" ref={printRef}>
           <div className="flex items-center gap-2 pb-4 border-b border-border">
             {isEditing ? (<><Edit className="w-4 h-4 text-primary" /><span className="text-sm font-medium text-primary">Edit Mode</span></>)
               : (<><Eye className="w-4 h-4 text-muted-foreground" /><span className="text-sm font-medium text-muted-foreground">View Mode</span></>)}
@@ -327,8 +344,15 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f, field); }} />
                     <label htmlFor={`upload-${field}`} className="cursor-pointer">
                       <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Click to upload</p>
+                      <p className="text-sm text-muted-foreground">
+                        {uploadPercent[field] > 0 && uploadPercent[field] < 100 ? `Uploading ${uploadPercent[field]}%` : "Click to upload"}
+                      </p>
                     </label>
+                    {uploadPercent[field] > 0 && uploadPercent[field] < 100 && (
+                      <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary transition-all" style={{ width: `${uploadPercent[field]}%` }} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center bg-muted">
