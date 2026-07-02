@@ -205,155 +205,186 @@ const TradesList = ({ trades, strategies, selectedStrategy, onStrategyChange, on
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {trades.map((trade, index) => (
-            <div key={trade.id}
-              className={`border border-border/50 rounded-lg p-4 space-y-3 hover:shadow-md transition-all animate-fade-in ${
-                selectedTrades.has(trade.id) ? 'bg-primary/5 border-primary/50' : ''
-              }`}
-              style={{ animationDelay: `${index * 30}ms` }}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <Checkbox checked={selectedTrades.has(trade.id)} onCheckedChange={() => toggleTradeSelection(trade.id)} />
-                  {getResultIcon(trade.result)}
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-medium truncate">
-                      {trade.assetPair || 'Trade'} — Entry: {trade.entry}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(trade.createdAt))} ago
-                      {trade.session ? ` · ${trade.session}` : ''}
-                      {trade.strategy ? ` · ${trade.strategy}` : ''}
-                    </p>
+          {trades.map((trade, index) => {
+            const tags: Array<{ label: string; value: string; tone?: string }> = [
+              { label: "Asset", value: trade.assetPair || "-" },
+              { label: "Entry", value: trade.entry || "-" },
+              { label: "TP", value: trade.tp || "-", tone: "success" },
+              { label: "SL", value: trade.sl || "-", tone: "danger" },
+              { label: "R/R", value: trade.rr || "-" },
+              ...(trade.strategy ? [{ label: "Strategy", value: trade.strategy }] : []),
+              ...(trade.session ? [{ label: "Session", value: trade.session }] : []),
+            ];
+            const toneClass = (t?: string) =>
+              t === "success" ? "border-success/30 bg-success/5 text-success"
+              : t === "danger" ? "border-danger/30 bg-danger/5 text-danger"
+              : "border-border/60 bg-muted/40 text-foreground";
+            return (
+              <div key={trade.id}
+                onClick={() => onViewTrade(trade.id)}
+                className={`group border border-border/50 rounded-xl p-4 space-y-3 hover:shadow-md hover:border-primary/40 transition-all animate-fade-in cursor-pointer ${
+                  selectedTrades.has(trade.id) ? 'bg-primary/5 border-primary/50' : ''
+                }`}
+                style={{ animationDelay: `${index * 30}ms` }}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox checked={selectedTrades.has(trade.id)} onCheckedChange={() => toggleTradeSelection(trade.id)} />
+                    {getResultIcon(trade.result)}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium truncate">
+                        #{trade.sno ?? '-'} · {trade.assetPair || 'Trade'}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(trade.createdAt))} ago
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {getResultBadge(trade.result)}
-                  <Button variant="outline" size="sm" onClick={() => onViewTrade(trade.id)} className="flex-shrink-0">
-                    <Eye className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">View</span>
-                  </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={() => handleEditClick(trade)} className="flex-shrink-0">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                      <DialogHeader><DialogTitle>Edit Trade</DialogTitle></DialogHeader>
-                      {editingTrade && editFormData && (
-                        <form onSubmit={handleEditSubmit} className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Asset Pair</Label>
-                              <Select value={editFormData.assetPair} onValueChange={(v) => handleEditInputChange('assetPair', v)}>
-                                <SelectTrigger><SelectValue placeholder="Select asset" /></SelectTrigger>
-                                <SelectContent>
-                                  {ASSET_PAIRS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Strategy</Label>
-                              <Select value={editFormData.strategy || ""} onValueChange={(v) => handleEditInputChange('strategy', v)}>
-                                <SelectTrigger><SelectValue placeholder="Select strategy" /></SelectTrigger>
-                                <SelectContent>
-                                  {userStrategies.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Session</Label>
-                              <Select value={editFormData.session || ""} onValueChange={(v) => handleEditInputChange('session', v)}>
-                                <SelectTrigger><SelectValue placeholder="Select session" /></SelectTrigger>
-                                <SelectContent>
-                                  {SESSIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Entry Price</Label>
-                              <Input value={editFormData.entry} onChange={(e) => handleEditInputChange('entry', e.target.value)} required />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Stop Loss</Label>
-                              <Input value={editFormData.sl} onChange={(e) => handleEditInputChange('sl', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Risk/Reward Ratio</Label>
-                              <Input value={editFormData.rr} onChange={(e) => handleEditInputChange('rr', e.target.value)} placeholder="e.g., 1:3" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Result</Label>
-                              <Select value={editFormData.result} onValueChange={(v) => handleEditInputChange('result', v)}>
-                                <SelectTrigger><SelectValue placeholder="Select result" /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="WIN">WIN</SelectItem>
-                                  <SelectItem value="LOSS">LOSS</SelectItem>
-                                  <SelectItem value="BE">BE (Break Even)</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Take Profits</Label>
-                            <LineNumbersTextarea value={editFormData.tp} onChange={(e) => handleEditInputChange('tp', e.target.value)} className="min-h-[100px]" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Reason</Label>
-                            <Textarea value={editFormData.reason} onChange={(e) => handleEditInputChange('reason', e.target.value)} rows={3} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Learning Outcome</Label>
-                            <Textarea value={editFormData.learning} onChange={(e) => handleEditInputChange('learning', e.target.value)} rows={3} />
-                          </div>
-
-                          {(['screenshot', 'afterTradeScreenshot'] as const).map((field) => (
-                            <div key={field} className="space-y-2">
-                              <Label>{field === 'screenshot' ? 'Setup Screenshot' : 'After Trade Screenshot'}</Label>
-                              <div className="flex flex-col gap-3">
-                                <div className="flex items-center gap-3">
-                                  <Button type="button" variant="outline" onClick={() => document.getElementById(`edit-${field}`)?.click()} className="flex items-center gap-2" disabled={uploading}>
-                                    <Upload className="h-4 w-4" />{uploading ? "Uploading..." : "Upload Image"}
-                                  </Button>
-                                </div>
-                                <input id={`edit-${field}`} type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
-                                  onChange={(e) => handleFileUpload(e, field)} className="hidden" />
-                                {editFormData[field] && (
-                                  <div className="relative inline-block">
-                                    <img src={editFormData[field] as string} alt="" className="max-w-full max-h-48 rounded-lg border border-border" />
-                                    <Button type="button" variant="destructive" size="icon"
-                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                                      onClick={() => removeScreenshot(field)}>
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                )}
+                  <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {getResultBadge(trade.result)}
+                    <Button variant="outline" size="sm" onClick={() => onViewTrade(trade.id)} className="flex-shrink-0">
+                      <Eye className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">View</span>
+                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={() => handleEditClick(trade)} className="flex-shrink-0">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader><DialogTitle>Edit Trade</DialogTitle></DialogHeader>
+                        {editingTrade && editFormData && (
+                          <form onSubmit={handleEditSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Asset Pair</Label>
+                                <Select value={editFormData.assetPair} onValueChange={(v) => handleEditInputChange('assetPair', v)}>
+                                  <SelectTrigger><SelectValue placeholder="Select asset" /></SelectTrigger>
+                                  <SelectContent>
+                                    {ASSET_PAIRS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Strategy</Label>
+                                <Select value={editFormData.strategy || ""} onValueChange={(v) => handleEditInputChange('strategy', v)}>
+                                  <SelectTrigger><SelectValue placeholder="Select strategy" /></SelectTrigger>
+                                  <SelectContent>
+                                    {userStrategies.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Session</Label>
+                                <Select value={editFormData.session || ""} onValueChange={(v) => handleEditInputChange('session', v)}>
+                                  <SelectTrigger><SelectValue placeholder="Select session" /></SelectTrigger>
+                                  <SelectContent>
+                                    {SESSIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Entry Price</Label>
+                                <Input value={editFormData.entry} onChange={(e) => handleEditInputChange('entry', e.target.value)} required />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Stop Loss</Label>
+                                <Input value={editFormData.sl} onChange={(e) => handleEditInputChange('sl', e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Risk/Reward Ratio</Label>
+                                <Input value={editFormData.rr} onChange={(e) => handleEditInputChange('rr', e.target.value)} placeholder="e.g., 1:3" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Result</Label>
+                                <Select value={editFormData.result} onValueChange={(v) => handleEditInputChange('result', v)}>
+                                  <SelectTrigger><SelectValue placeholder="Select result" /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="WIN">WIN</SelectItem>
+                                    <SelectItem value="LOSS">LOSS</SelectItem>
+                                    <SelectItem value="BE">BE (Break Even)</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
-                          ))}
 
-                          <div className="flex justify-end gap-2">
-                            <Button type="button" variant="outline" onClick={() => setEditingTrade(null)}>Cancel</Button>
-                            <Button type="submit" disabled={updating || uploading}>{updating ? "Updating..." : "Update Trade"}</Button>
-                          </div>
-                        </form>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="outline" size="icon" onClick={() => onDeleteTrade(trade.id)} className="flex-shrink-0">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                            <div className="space-y-2">
+                              <Label>Take Profits</Label>
+                              <LineNumbersTextarea value={editFormData.tp} onChange={(e) => handleEditInputChange('tp', e.target.value)} className="min-h-[100px]" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Reason</Label>
+                              <Textarea value={editFormData.reason} onChange={(e) => handleEditInputChange('reason', e.target.value)} rows={3} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Learning Outcome</Label>
+                              <Textarea value={editFormData.learning} onChange={(e) => handleEditInputChange('learning', e.target.value)} rows={3} />
+                            </div>
+
+                            {(['screenshot', 'afterTradeScreenshot'] as const).map((field) => (
+                              <div key={field} className="space-y-2">
+                                <Label>{field === 'screenshot' ? 'Setup Screenshot' : 'After Trade Screenshot'}</Label>
+                                <div className="flex flex-col gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`edit-${field}`)?.click()} className="flex items-center gap-2" disabled={uploading}>
+                                      <Upload className="h-4 w-4" />{uploading ? "Uploading..." : "Upload Image"}
+                                    </Button>
+                                    {uploadPercent[field] > 0 && uploadPercent[field] < 100 && (
+                                      <span className="text-xs text-muted-foreground">{uploadPercent[field]}%</span>
+                                    )}
+                                  </div>
+                                  {uploadPercent[field] > 0 && uploadPercent[field] < 100 && (
+                                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                      <div className="h-full bg-primary transition-all" style={{ width: `${uploadPercent[field]}%` }} />
+                                    </div>
+                                  )}
+                                  <input id={`edit-${field}`} type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
+                                    onChange={(e) => handleFileUpload(e, field)} className="hidden" />
+                                  {editFormData[field] && (
+                                    <div className="relative inline-block">
+                                      <img src={editFormData[field] as string} alt="" className="max-w-full max-h-48 rounded-lg border border-border" />
+                                      <Button type="button" variant="destructive" size="icon"
+                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                        onClick={() => removeScreenshot(field)}>
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+
+                            <div className="flex justify-end gap-2">
+                              <Button type="button" variant="outline" onClick={() => setEditingTrade(null)}>Cancel</Button>
+                              <Button type="submit" disabled={updating || uploading}>{updating ? "Updating..." : "Update Trade"}</Button>
+                            </div>
+                          </form>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" size="icon" onClick={() => onDeleteTrade(trade.id)} className="flex-shrink-0">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div><span className="font-medium">TP:</span> {trade.tp || 'N/A'}</div>
-                <div><span className="font-medium">SL:</span> {trade.sl || 'N/A'}</div>
+                <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  {tags.map((t) => (
+                    <span key={t.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs ${toneClass(t.tone)}`}>
+                      <span className="font-medium opacity-70">{t.label}</span>
+                      <span className="font-mono">{t.value}</span>
+                    </span>
+                  ))}
+                </div>
+
+                {(trade.reason || trade.learning) && (
+                  <div className="pt-2 border-t border-border/40 space-y-1 text-sm text-muted-foreground">
+                    {trade.reason && <div className="line-clamp-2"><span className="font-medium text-foreground">Reason:</span> {trade.reason}</div>}
+                    {trade.learning && <div className="line-clamp-2"><span className="font-medium text-foreground">Learning:</span> {trade.learning}</div>}
+                  </div>
+                )}
               </div>
-              {trade.reason && <div className="text-sm"><span className="font-medium">Reason:</span> {trade.reason}</div>}
-              {trade.learning && <div className="text-sm"><span className="font-medium">Learning:</span> {trade.learning}</div>}
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
