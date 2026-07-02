@@ -208,7 +208,7 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        <ResourceUsage />
+        {user?.role === "admin" && <ResourceUsage />}
       </div>
     </div>
   );
