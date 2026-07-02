@@ -202,7 +202,7 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <ProgressToast title="Saving trade..." progress={saveProgress} isVisible={saving || saveProgress > 0} />
       <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 print:hidden">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
             <div className="flex items-center gap-3">
@@ -213,14 +213,25 @@ const TradePage = ({ tradeId, onBack, viewOnly = false }: TradePageProps) => {
               {getResultBadge(trade.result)}
             </div>
           </div>
-          {!isEditing && (
-            <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
-              <Edit className="w-4 h-4" />Edit Trade
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1" />Print
             </Button>
-          )}
+            <Button variant="outline" size="sm" onClick={() => printRef.current && printElementAsPDF(printRef.current, `trade-${trade.sno || trade.id}.pdf`)}>
+              <FileText className="w-4 h-4 mr-1" />PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => printRef.current && printElementAsPNG(printRef.current, `trade-${trade.sno || trade.id}.png`)}>
+              <FileImage className="w-4 h-4 mr-1" />PNG
+            </Button>
+            {!isEditing && (
+              <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+                <Edit className="w-4 h-4" />Edit Trade
+              </Button>
+            )}
+          </div>
         </div>
 
-        <Card className="p-6 space-y-6">
+        <Card className="p-6 space-y-6" ref={printRef}>
           <div className="flex items-center gap-2 pb-4 border-b border-border">
             {isEditing ? (<><Edit className="w-4 h-4 text-primary" /><span className="text-sm font-medium text-primary">Edit Mode</span></>)
               : (<><Eye className="w-4 h-4 text-muted-foreground" /><span className="text-sm font-medium text-muted-foreground">View Mode</span></>)}
